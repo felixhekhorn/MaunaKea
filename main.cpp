@@ -1,5 +1,4 @@
 #include <LHAPDF/LHAPDF.h>
-//#include <dvegas/dvegas.h>
 
 #include <cmath>
 #include <cstddef>
@@ -9,17 +8,20 @@
 
 #include "PineAPPL.hpp"
 #include "Integration.hpp"
+#include "FO.hpp"
 
 struct IntKernel : public HepSource::Integrand {
     PineAPPL::Grid* grid;
     LHAPDF::PDF* pdf;
-    double rho_h;
-    double m2;
+    dbl rho_h;
+    dbl m2;
     //IntKernel(): HepSource::Integrand(2,1) {}
     //virtual ~IntKernel() {}
     void operator()(const double x[], const int k[], cdbl& weight, cdbl aux[], double f[]) {
+      (void) k;
+      (void) aux;
       cdbl beta_min = 0.;
-      cdbl beta_h = sqrt(1. - rho_h);
+      cdbl beta_h = sqrt(1. - this->rho_h);
       cdbl beta_max = beta_h;
       cdbl beta = beta_min + (beta_max - beta_min) * x[0];
       cdbl rho = 1 - beta*beta;
@@ -30,10 +32,11 @@ struct IntKernel : public HepSource::Integrand {
       cdbl x2 = tau / x1;
       cdbl raw_jac = 2.* beta/rho / x1;
       cdbl mu2 = this->m2;
-      dbl w = raw_jac;
-      this->grid->fill(x1, x2, mu2, 0, 0.5, 0, w*weight);
-      w *= this->pdf->xfxQ2(21, x1, mu2) / x1 * this->pdf->xfxQ2(21, x2, mu2) / x2;
-      f[0] = w;
+      cdbl c = f0gg(rho);
+      cdbl common_weight = 0.38937966e9 * c * raw_jac / this->m2 * (beta_max - beta_min) * (x1_max - x1_min);
+      this->grid->fill(x1, x2, mu2, 0, 0.5, 0, common_weight * weight  * x1 * x2);
+      cdbl pdf_weight = common_weight * this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(21, x2, mu2) * pow(this->pdf->alphasQ2(mu2),2) ;
+      f[0] = pdf_weight;
     }
     void Dvegas_init() const {
       this->grid->scale(0.);
@@ -42,12 +45,6 @@ struct IntKernel : public HepSource::Integrand {
       this->grid->scale(1./iterations);
     };
 };
-
-// double ker (double x, 	     void * par) 
-// {
-//     KerArgs * args = (KerArgs*) par;
-//   /*FOcomponents * p = (FOcomponents*) par;
-//   double f;
   
 //   if ((p->partonchannel)=="qqbar")
 //     {
@@ -104,6 +101,7 @@ int main() {
     cdbl S_h = pow(8e3,2);
     cdbl m2 = pow(172.5,2);
     cdbl rho_h = 4.*m2/S_h;
+    printf("rho_h=%e, beta_h=%e",rho_h,sqrt(1. - rho_h));
     // create a new luminosity function
     PineAPPL::Lumi lumi;
     lumi.add({PineAPPL::LumiEntry {21,21,1.0}});
@@ -111,13 +109,14 @@ int main() {
     std::unique_ptr<LHAPDF::PDF> pdf (LHAPDF::mkPDF("gonly", 0));
 
     // only LO
-    std::vector<PineAPPL::Order> orders = {PineAPPL::Order {0,0,0,0}};
+    std::vector<PineAPPL::Order> orders = {PineAPPL::Order {2,0,0,0}};
 
     // fully-inclusive cross-section
     std::vector<double> bins = {0.0, 1.0};
 
     // create the PineAPPL grid with default interpolation and binning parameters
     PineAPPL::KeyVal kv;
+    kv.set_double("x_min", rho_h);
     PineAPPL::Grid grid(lumi, orders, bins, kv);
 
     // fill the grid with phase-space points

@@ -86,7 +86,7 @@ struct IntegrationOutput {
  * @param out output of meta data
  * @return \f$\int\limits_0^1 f(a_1,a_2)\,da_1da_2\f$
  */
-template <class IntKerT> cdbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out) {
+template <class IntKerT> dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out) {
     cuint dim = 2;
     HepSource::Dvegas dv(dim,cfg.Dvegas_bins,1,*K);
     /** @todo activate correlation between z and x? -> Dvegas dv(dim,cfg.Dvegas_bins,2,{},0,1,F); */

@@ -5,7 +5,7 @@ LHAPDF_DEPS != pkg-config --cflags --libs lhapdf
 #GSL_DEPS != gsl-config --cflags --libs
 DVEGAS_DEPS != pkg-config --cflags --libs dvegas
 
-MaunaKea: main.cpp PineAPPL.hpp config.h Integration.hpp
+MaunaKea: main.cpp PineAPPL.hpp config.h Integration.hpp FO.hpp
 	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(DVEGAS_DEPS) -o $@
 
 PHONY: clean
