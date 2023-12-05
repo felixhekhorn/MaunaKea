@@ -8,39 +8,39 @@
 #include <vector>
 
 #include "PineAPPL.hpp"
-//#include "Integration.hpp"
+#include "Integration.hpp"
 
-struct IntKernel /*: public HepSource::Integrand*/ {
+struct IntKernel : public HepSource::Integrand {
     PineAPPL::Grid* grid;
     LHAPDF::PDF* pdf;
     double rho_h;
     double m2;
     //IntKernel(): HepSource::Integrand(2,1) {}
     //virtual ~IntKernel() {}
-    void operator()(const double x[], const int k[], const double& weight, const double aux[], double f[]) {
-      const double beta_min = 0.;
-      const double beta_h = sqrt(1. - rho_h);
-      const double beta_max = beta_h;
-      const double beta = beta_min + (beta_max - beta_min) * x[0];
-      const double rho = 1 - beta*beta;
-      const double tau = rho_h / rho;
-      const double x1_min = tau;
-      const double x1_max = 1.;
-      // const double x1 = x1_min + (x1_max - x1_min) * x[1];
-      // const double x2 = tau / x1;
-      double x1 = x[0];
-      double x2 = x[1];
-      const double raw_jac = 2.* beta/rho / x1;
-      const double mu2 = this->m2;
-      double w = raw_jac;
-      w = 1.;
-      w *= weight;
-      this->grid->fill(x1, x2, mu2, 0, 0.5, 0, w);
-      w *= this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(21, x2, mu2);
+    void operator()(const double x[], const int k[], cdbl& weight, cdbl aux[], double f[]) {
+      cdbl beta_min = 0.;
+      cdbl beta_h = sqrt(1. - rho_h);
+      cdbl beta_max = beta_h;
+      cdbl beta = beta_min + (beta_max - beta_min) * x[0];
+      cdbl rho = 1 - beta*beta;
+      cdbl tau = rho_h / rho;
+      cdbl x1_min = tau;
+      cdbl x1_max = 1.;
+      cdbl x1 = x1_min + (x1_max - x1_min) * x[1];
+      cdbl x2 = tau / x1;
+      cdbl raw_jac = 2.* beta/rho / x1;
+      cdbl mu2 = this->m2;
+      dbl w = raw_jac;
+      this->grid->fill(x1, x2, mu2, 0, 0.5, 0, w*weight);
+      w *= this->pdf->xfxQ2(21, x1, mu2) / x1 * this->pdf->xfxQ2(21, x2, mu2) / x2;
       f[0] = w;
     }
-    //void Dvegas_init() const {}
-    //void Dvegas_final(cuint iterations) const {};
+    void Dvegas_init() const {
+      this->grid->scale(0.);
+    }
+    void Dvegas_final(cuint iterations) const {
+      this->grid->scale(1./iterations);
+    };
 };
 
 // double ker (double x, 	     void * par) 
@@ -85,65 +85,26 @@ struct IntKernel /*: public HepSource::Integrand*/ {
 //   return f/x;*/
 // }
 
-double fill_grid(PineAPPL::Grid* grid, LHAPDF::PDF* pdf, double rho_h) {
-    // IntKernel k;
-    // k.grid = &grid;
-    // k.pdf = &pdf;
-    // k.rho_h = rho_h;
-    // k.m2 = pow(172.5,2);
+void fill_grid(PineAPPL::Grid* grid, LHAPDF::PDF* pdf, cdbl rho_h, cdbl m2) {
+    IntKernel k;
+    k.grid = grid;
+    k.pdf = pdf;
+    k.rho_h = rho_h;
+    k.m2 = m2;
+    IntegrationConfig cfg;
+    cfg.MC_warmupCalls = 1000;
+    cfg.calls = 20000;
+    cfg.verbosity = 3;
+    IntegrationOutput out;
+    integrate2D(&k, cfg, &out);
+    printf("res: %e +- %e\n", out.result, out.error);
 }
 
-
-// double fill_grid(PineAPPL::Grid &grid, LHAPDF::PDF &pdf, double rho_h) {
-//     IntKernel k;
-//     k.grid = &grid;
-//     k.pdf = &pdf;
-//     k.rho_h = rho_h;
-//     k.m2 = pow(172.5,2);
-
-//     double res, err;
-
-//     double xl[2] = { 0., 0.};
-//     double xu[2] = { 1., 1.};
-
-//     const gsl_rng_type *T;
-//     gsl_rng *r;
-
-//     gsl_monte_function G = { &callFunctor2D<IntKernel>, 2, &k };
-
-//     size_t calls = 100000;
-
-//     gsl_rng_env_setup ();
-
-//     T = gsl_rng_default;
-//     r = gsl_rng_alloc (T);
-//     gsl_monte_vegas_state *s = gsl_monte_vegas_alloc (2);
-
-//     gsl_monte_vegas_integrate (&G, xl, xu, 2, 10000, r, s,
-//                                &res, &err);
-//     printf ("vegas warm-up %e +- %e\n", res, err);
-
-//     printf ("converging...\n");
-
-//     unsigned int guard = 0;
-//     do
-//       {
-//         gsl_monte_vegas_integrate (&G, xl, xu, 2, calls, r, s, &res, &err);
-//         printf ("result = %e sigma = %e "
-//                 "chisq/dof = %.1f\n", res, err, gsl_monte_vegas_chisq (s));
-//       }
-//     while (fabs (gsl_monte_vegas_chisq (s) - 1.0) > 0.5 && guard++ < 20);
-
-//     printf ("vegas final %e +- %e\n", res, err);
-
-//     gsl_monte_vegas_free (s);
-
-//   gsl_rng_free (r);
-//   return res;
-// }
-
 int main() {
-    // create a new luminosity function for the $\gamma\gamma$ initial state
+    cdbl S_h = pow(8e3,2);
+    cdbl m2 = pow(172.5,2);
+    cdbl rho_h = 4.*m2/S_h;
+    // create a new luminosity function
     PineAPPL::Lumi lumi;
     lumi.add({PineAPPL::LumiEntry {21,21,1.0}});
 
@@ -160,7 +121,8 @@ int main() {
     PineAPPL::Grid grid(lumi, orders, bins, kv);
 
     // fill the grid with phase-space points
-    double res = fill_grid(&grid, pdf.get(), 0.1);
+    fill_grid(&grid, pdf.get(), rho_h, m2);
+    grid.optimize();
 
     // store some metadata in the grid
     //grid.set_key_value("events", "10000000");
