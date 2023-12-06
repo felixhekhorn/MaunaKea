@@ -1,0 +1,46 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: fix-encoding-pragma
+  - repo: https://gitlab.com/daverona/pre-commit/cpp
+    rev: 0.8.0                 # use the most recent version
+    hooks:
+    # Hooks using native
+    - id: clang-format         # formatter for C/C++ code based on a style guide
+      args: ["-style={BasedOnStyle: Google,ColumnLimit: 120}"]
+    - id: cpplint              # linter (or style-error checker) for Google C++ Style Guide
+      args: ["--filter=-legal/copyright", "--linelength=120"]
+  #   - id: cppcheck             # static analyzer for C/C++ code
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 23.11.0
+    hooks:
+      - id: black
+  - repo: https://github.com/asottile/blacken-docs
+    rev: 1.16.0
+    hooks:
+      - id: blacken-docs
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+    -   id: pydocstyle
+        files: ^py/
+        additional_dependencies:
+          - toml

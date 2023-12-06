@@ -3,17 +3,16 @@
  * @brief includes all common header files and defines types and shortcuts
  */
 
-#ifndef Config_H_
-#define Config_H_
+#ifndef CONFIG_H_
+#define CONFIG_H_
 
-#include <stdlib.h>
-#include <cmath>
-#include <string>
-#include <stdexcept>
-#include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
 
-using namespace std;
+#include <cmath>
+#include <iostream>
+#include <stdexcept>
+#include <string>
 
 /** @name shorthands */
 ///@{
@@ -25,7 +24,7 @@ typedef const uint cuint;
 typedef const int cint;
 
 /** @brief string shorthand */
-typedef string str;
+typedef std::string str;
 
 /** @brief defines floating point precision */
 typedef double dbl;
@@ -33,7 +32,7 @@ typedef double dbl;
 typedef const dbl cdbl;
 
 /** @brief NaN (often (mis-)used by me as synonym to null-pointer/void) */
-cdbl dblNaN = nan("");
+cdbl dblNaN = std::nan("");
 ///@}
 
-#endif // Config_H_
+#endif  // CONFIG_H_
