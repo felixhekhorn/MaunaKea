@@ -114,7 +114,7 @@ int main() {
     // fully-inclusive cross-section
     std::vector<double> bins = {0.0, 1.0};
 
-    // create the PineAPPL grid with default interpolation and binning parameters
+    // create the PineAPPL grid
     PineAPPL::KeyVal kv;
     kv.set_double("x_min", rho_h);
     PineAPPL::Grid grid(lumi, orders, bins, kv);
