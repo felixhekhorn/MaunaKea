@@ -8,6 +8,7 @@
 #include "./PineAPPL.hpp"
 #include "./config.h"
 
+namespace MaunaKea {
 /**
  * @brief Integration kernel
  */
@@ -32,6 +33,28 @@ class Kernel : public HepSource::Integrand {
   dbl as;
 
  public:
+  /** @name Order masks */
+  ///@{
+  /** @brief LO marker */
+  static cuint ORDER_LO = 1;
+  /** @brief NLO marker */
+  static cuint ORDER_NLO = 1 << 1;
+  /** @brief NNLO marker */
+  static cuint ORDER_NNLO = 1 << 2;
+  /** @brief all order marker */
+  static cuint ORDER_ALL = ORDER_LO | ORDER_NLO | ORDER_NNLO;
+  ///@}
+
+  /** @name Flavor masks */
+  ///@{
+  /** @brief gluon-gluon marker */
+  static cuint FLAVOR_GG = 1;
+  /** @brief quark-antiquark marker */
+  static cuint FLAVOR_QQBAR = 1 << 1;
+  /** @brief all order marker */
+  static cuint FLAVOR_ALL = FLAVOR_GG | FLAVOR_QQBAR;
+  ///@}
+
   /**
    * @brief Constructor
    * @param m2 heavy quark mass
@@ -69,11 +92,11 @@ class Kernel : public HepSource::Integrand {
    * @brief Kernel function in Dvegas
    * @param x adapted continuous integration variables
    * @param k discrete integration variables
-   * @param weight integration weight
+   * @param vegas_weight integration weight
    * @param aux unadapted continuous integration variables
    * @param f output
    */
-  void operator()(const double x[], const int k[], const double& weight, cdbl aux[], double f[]) {
+  void operator()(const double x[], const int k[], const double& vegas_weight, cdbl aux[], double f[]) {
     (void)k;
     (void)aux;
     cdbl beta_min = 0.;
@@ -86,12 +109,23 @@ class Kernel : public HepSource::Integrand {
     cdbl x1 = x1_min + (x1_max - x1_min) * x[1];
     cdbl x2 = tau / x1;
     cdbl raw_jac = 2. * beta / rho / x1;
+    cdbl jac = raw_jac * (beta_max - beta_min) * (x1_max - x1_min);
+    // 1/m2 to get the dimension correct + convert to pb
+    cdbl norm = 0.38937966e9 / this->m2;
+    cdbl common_weight = norm * jac;
     cdbl mu2 = this->m2;
-    cdbl c = f0gg(rho);
-    cdbl common_weight = 0.38937966e9 * c * raw_jac / this->m2 * (beta_max - beta_min) * (x1_max - x1_min);
-    this->grid->fill(x1, x2, mu2, 0, 0.5, 0, common_weight * weight * x1 * x2);
-    cdbl pdf_weight = common_weight * this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(21, x2, mu2) * pow(this->as, 2);
-    f[0] = pdf_weight;
+    // Collect all pieces
+    dbl tot = 0.;
+    // gluon-gluon channel
+    if ((this->flavor_mask & FLAVOR_GG) == FLAVOR_GG) {
+      cdbl gg = this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(21, x2, mu2);
+      if ((this->order_mask & ORDER_LO) == ORDER_LO) {
+        cdbl weight = common_weight * f0gg(rho);
+        this->grid->fill(x1, x2, mu2, 0, 0.5, 0, weight * vegas_weight * x1 * x2);
+        tot += weight * gg * pow(this->as, 2);
+      }
+    }
+    f[0] = tot;
   }
 
   /** @brief Initialize grid */
@@ -124,6 +158,7 @@ class Kernel : public HepSource::Integrand {
   /** @see HepSource::Integrand::Dvegas_final */
   void Dvegas_final(cuint iterations) const { this->grid->scale(1. / iterations); }
 };
+}  // namespace MaunaKea
 
 // if ((p->partonchannel)=="qqbar")
 // {

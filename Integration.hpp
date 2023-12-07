@@ -6,6 +6,7 @@
 
 #include "./config.h"
 
+namespace MaunaKea {
 /**
  * @class IntegrationConfig
  * @brief configurates a single integration
@@ -138,5 +139,6 @@ dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out
   out->MC_chi2inter = guard;
   return res;
 }
+}  // namespace MaunaKea
 
 #endif  // INTEGRATION_HPP_

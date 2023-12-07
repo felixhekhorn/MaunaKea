@@ -4,8 +4,11 @@
 #include "./Integration.hpp"
 #include "./Kernel.hpp"
 
+/** @brief Hadroproduction of heavy quark flavors */
+namespace MaunaKea {
+
 class MaunaKea {
-  /** @brief integration kernel */
+  /** @brief Integration kernel */
   Kernel k;
 
  public:
@@ -58,5 +61,5 @@ class MaunaKea {
    */
   void write(const str fp) const { this->k.writeGrid(fp); }
 };
-
+}  // namespace MaunaKea
 #endif  // MAUNAKEA_HPP_
