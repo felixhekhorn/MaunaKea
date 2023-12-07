@@ -9,9 +9,8 @@
 #include "./config.h"
 
 namespace MaunaKea {
-/**
- * @brief Integration kernel
- */
+
+/** @brief Integration kernel */
 class Kernel : public HepSource::Integrand {
   /** @brief heavy quark mass */
   dbl m2;
@@ -125,6 +124,18 @@ class Kernel : public HepSource::Integrand {
         tot += weight * gg * pow(this->as, 2);
       }
     }
+    // quark-antiquark channel
+    if ((this->flavor_mask & FLAVOR_QQBAR) == FLAVOR_QQBAR) {
+      dbl qqbar = 0.;
+      for (uint pid = 1; pid <= this->nl; ++pid) {
+        qqbar += 2. * this->pdf->xfxQ2(pid, x1, mu2) * this->pdf->xfxQ2(-pid, x2, mu2);
+      }
+      if ((this->order_mask & ORDER_LO) == ORDER_LO) {
+        cdbl weight = common_weight * f0qqbar(rho);
+        this->grid->fill(x1, x2, mu2, 0, 0.5, 1, weight * vegas_weight * x1 * x2);
+        tot += weight * qqbar * pow(this->as, 2);
+      }
+    }
     f[0] = tot;
   }
 
@@ -132,9 +143,15 @@ class Kernel : public HepSource::Integrand {
   void initGrid() {
     // create a new luminosity function
     PineAPPL::Lumi lumi;
+    // gluon-gluon channel
     lumi.add({PineAPPL::LumiEntry{21, 21, 1.0}});
+    // quark-antiquark channel
+    {
+      std::vector<PineAPPL::LumiEntry> qqbar;
+      for (uint pid = 1; pid <= this->nl; ++pid) qqbar.push_back({static_cast<int>(pid), static_cast<int>(-pid), 2.0});
+      lumi.add(qqbar);
+    }
 
-    // only LO
     std::vector<PineAPPL::Order> orders = {PineAPPL::Order{2, 0, 0, 0}};
 
     // fully-inclusive cross-section

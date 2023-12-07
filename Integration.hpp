@@ -7,10 +7,8 @@
 #include "./config.h"
 
 namespace MaunaKea {
-/**
- * @class IntegrationConfig
- * @brief configurates a single integration
- */
+
+/** @brief Integration parameter configuration */
 struct IntegrationConfig {
   /** @name common variables */
   ///@{
@@ -44,10 +42,7 @@ struct IntegrationConfig {
   ///@}
 };
 
-/**
- * @class IntegrationOutput
- * @brief stores meta data for a single integration
- */
+/** @brief Integration result */
 struct IntegrationOutput {
   /** @name common variables */
   ///@{
@@ -79,20 +74,19 @@ struct IntegrationOutput {
 /**
  * @brief integrates the kernel in 2 dimension
  * @param K kernel
- * @param cfg config
- * @param out output of meta data
- * @return \f$\int\limits_0^1 f(a_1,a_2)\,da_1da_2\f$
+ * @param cfg configuration
+ * @param out output
+ * @return \f$\int\limits_0^1 K(a_1,a_2)\,da_1da_2\f$
  */
 template <class IntKerT>
 dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out) {
   cuint dim = 2;
   HepSource::Dvegas dv(dim, cfg.Dvegas_bins, 1, *K);
-  /** @todo activate correlation between z and x? -> Dvegas dv(dim,cfg.Dvegas_bins,2,{},0,1,F); */
   double res, err;
-  /* clear histograms */
+  // clear histograms
   K->Dvegas_init();
-  /* warm-up */
-  /* catch zero kernel */
+  // warm-up
+  // catch zero kernel
   try {
     HepSource::VEGAS(dv, cfg.MC_warmupCalls, cfg.MC_warmupIterations, 0, cfg.verbosity - 3);
   } catch (std::domain_error& e) {
@@ -109,8 +103,8 @@ dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out
   out->error = dblNaN;
   out->MC_chi2 = dblNaN;
   out->MC_chi2inter = 0;
-  /* run */
-  if (cfg.MC_adaptChi2) { /* adapt chi */
+  // run
+  if (cfg.MC_adaptChi2) {  // adapt chi
     do {
       if (!std::isfinite(res)) return res;
       K->Dvegas_init();
@@ -122,13 +116,14 @@ dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out
         printf("[INFO] int%dD(Dvegas): [%d] % e ± %.3e (%.3f%%) chi2/it: %.3f\n", dim, guard, res, err,
                fabs(err / res * 1e2), e.chiSquarePerIteration());
     } while (fabs(e.chiSquarePerIteration() - 1.0) > 0.5 && ++guard < 15);
-  } else { /* simple run */
+  } else {  // simple run
     K->Dvegas_init();
     HepSource::VEGAS(dv, cfg.calls, cfg.MC_iterations, 1, cfg.verbosity - 2);
     e = dv.stats(0);
     res = e.integral();
     err = e.standardDeviation();
   }
+  // finish
   K->Dvegas_final(cfg.MC_iterations);
   if (1 == cfg.verbosity)
     printf("[INFO] int%dD(Dvegas): [%d] % e ± %.3e (%.3f%%) chi2/it: %.3f\n", dim, guard, res, err,

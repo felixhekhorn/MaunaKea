@@ -7,12 +7,13 @@
 /** @brief Hadroproduction of heavy quark flavors */
 namespace MaunaKea {
 
+/** @brief Main application class */
 class MaunaKea {
   /** @brief Integration kernel */
   Kernel k;
 
  public:
-  /** @brief Integration configurtation */
+  /** @brief Integration configuration */
   IntegrationConfig intCfg;
   /** @brief Integration output */
   IntegrationOutput intOut;
