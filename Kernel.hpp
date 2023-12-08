@@ -31,6 +31,24 @@ class Kernel : public HepSource::Integrand {
   /** @brief strong coupling constant */
   dbl as;
 
+  /** @name Order mapping */
+  ///@{
+  /** @brief LO position */
+  static cuint IDX_ORDER_LO = 0;
+  /** @brief NLO position */
+  static cuint IDX_ORDER_NLO = 1;
+  ///@}
+
+  /** @name Channel mapping */
+  ///@{
+  /** @brief gluon-gluon position */
+  static cuint IDX_FLAVOR_GG = 0;
+  /** @brief quark-antiquark position */
+  static cuint IDX_FLAVOR_QQBAR = 1;
+  /** @brief gluon-quark position */
+  static cuint IDX_FLAVOR_GQ = 2;
+  ///@}
+
  public:
   /** @name Order masks */
   ///@{
@@ -50,8 +68,10 @@ class Kernel : public HepSource::Integrand {
   static cuint FLAVOR_GG = 1;
   /** @brief quark-antiquark marker */
   static cuint FLAVOR_QQBAR = 1 << 1;
+  /** @brief gluon-quark marker */
+  static cuint FLAVOR_GQ = 1 << 2;
   /** @brief all order marker */
-  static cuint FLAVOR_ALL = FLAVOR_GG | FLAVOR_QQBAR;
+  static cuint FLAVOR_ALL = FLAVOR_GG | FLAVOR_QQBAR | FLAVOR_GQ;
   ///@}
 
   /**
@@ -118,10 +138,18 @@ class Kernel : public HepSource::Integrand {
     // gluon-gluon channel
     if ((this->flavor_mask & FLAVOR_GG) == FLAVOR_GG) {
       cdbl gg = this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(21, x2, mu2);
+      // LO
       if ((this->order_mask & ORDER_LO) == ORDER_LO) {
         cdbl weight = common_weight * f0gg(rho);
-        this->grid->fill(x1, x2, mu2, 0, 0.5, 0, weight * vegas_weight * x1 * x2);
+        this->grid->fill(x1, x2, mu2, IDX_ORDER_LO, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
         tot += weight * gg * pow(this->as, 2);
+      }
+      // NLO
+      if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
+        // bare
+        cdbl weight = common_weight * f1gg(rho, this->nl);
+        this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
+        tot += weight * gg * pow(this->as, 3);
       }
     }
     // quark-antiquark channel
@@ -130,10 +158,32 @@ class Kernel : public HepSource::Integrand {
       for (uint pid = 1; pid <= this->nl; ++pid) {
         qqbar += 2. * this->pdf->xfxQ2(pid, x1, mu2) * this->pdf->xfxQ2(-pid, x2, mu2);
       }
+      // LO
       if ((this->order_mask & ORDER_LO) == ORDER_LO) {
         cdbl weight = common_weight * f0qqbar(rho);
-        this->grid->fill(x1, x2, mu2, 0, 0.5, 1, weight * vegas_weight * x1 * x2);
+        this->grid->fill(x1, x2, mu2, IDX_ORDER_LO, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
         tot += weight * qqbar * pow(this->as, 2);
+      }
+      // NLO
+      if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
+        // bare
+        cdbl weight = common_weight * f1qqbar(rho, this->nl);
+        this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
+        tot += weight * qqbar * pow(this->as, 3);
+      }
+    }
+    // gluon-quark channel
+    if ((this->flavor_mask & FLAVOR_GQ) == FLAVOR_GQ) {
+      dbl gq = 0.;
+      for (uint pid = 1; pid <= this->nl; ++pid) {
+        gq += 2. * this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(-pid, x2, mu2);
+        gq += 2. * this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(pid, x2, mu2);
+      }
+      // NLO
+      if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
+        cdbl weight = common_weight * f1gq(rho);
+        this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GQ, weight * vegas_weight * x1 * x2);
+        tot += weight * gq * pow(this->as, 3);
       }
     }
     f[0] = tot;
@@ -151,8 +201,17 @@ class Kernel : public HepSource::Integrand {
       for (uint pid = 1; pid <= this->nl; ++pid) qqbar.push_back({static_cast<int>(pid), static_cast<int>(-pid), 2.0});
       lumi.add(qqbar);
     }
+    // gluon-quark channel
+    {
+      std::vector<PineAPPL::LumiEntry> gq;
+      for (uint pid = 1; pid <= this->nl; ++pid) {
+        gq.push_back({21, static_cast<int>(-pid), 2.0});
+        gq.push_back({21, static_cast<int>(pid), 2.0});
+      }
+      lumi.add(gq);
+    }
 
-    std::vector<PineAPPL::Order> orders = {PineAPPL::Order{2, 0, 0, 0}};
+    std::vector<PineAPPL::Order> orders = {PineAPPL::Order{2, 0, 0, 0}, PineAPPL::Order{3, 0, 0, 0}};
 
     // fully-inclusive cross-section
     std::vector<double> bins = {0.0, 1.0};
