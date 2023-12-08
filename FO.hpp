@@ -85,13 +85,13 @@ dbl f1gg(cdbl rho, cdbl nl) {
 dbl f1gq(cdbl rho) {
   cdbl b = sqrt(1 - rho);
   cdbl lbe = log(b);
-  cdbl lbe2 = pow(lbe, 2);
+  // cdbl lbe2 = pow(lbe, 2);
   cdbl lrho = log(rho);
   cdbl lrho2 = pow(lrho, 2);
   cdbl lrho3 = lrho * lrho2;
   cdbl lrho4 = pow(lrho2, 2);
   cdbl lrho5 = lrho * lrho4;
-  cdbl rho2 = pow(rho, 2);
+  // cdbl rho2 = pow(rho, 2);
   cdbl b2 = pow(b, 2);
   cdbl b3 = pow(b, 3);
   cdbl b4 = pow(b, 4);

@@ -1,11 +1,3 @@
-#include <LHAPDF/LHAPDF.h>
-
-#include <cmath>
-#include <cstddef>
-#include <cstdio>
-#include <random>
-#include <vector>
-
 #include "./MaunaKea.hpp"
 
 int main() {
@@ -13,7 +5,7 @@ int main() {
   cdbl m2 = pow(172.5, 2);
   cdbl S_h = pow(8e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, 3, 4);
+  MaunaKea::MaunaKea mk(m2, nl, 3, 7);
   mk.setHadronicS(S_h);
   mk.setPDF("NNPDF40_nnlo_as_01180", 0);
   // fill the grid

@@ -49,6 +49,9 @@ class Kernel : public HepSource::Integrand {
   static cuint IDX_FLAVOR_GQ = 2;
   ///@}
 
+  /** @brief hide inherited assignment */
+  using HepSource::Integrand::operator=;
+
  public:
   /** @name Order masks */
   ///@{
