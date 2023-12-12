@@ -14,14 +14,16 @@ namespace MaunaKea {
 
 /** @name LO results */
 ///@{
-dbl f0gg(cdbl rho) {
+dbl f0gg(cdbl rho, cdbl nl) {
+  (void)nl;
   cdbl beta = sqrt(1 - rho);
   cdbl f =
       pi * beta * (rho / 192.) * ((pow(rho, 2) + 16 * rho + 16) * log((1 + beta) / (1 - beta)) / beta - 28 - 31 * rho);
   return f;
 }
 
-dbl f0qqbar(cdbl rho) {
+dbl f0qqbar(cdbl rho, cdbl nl) {
+  (void)nl;
   cdbl beta = sqrt(1 - rho);
   return pi * beta * rho / 27. * (2 + rho);
 }
@@ -89,7 +91,8 @@ dbl f1gg(cdbl rho, cdbl nl) {
   return (f10nl0 + nl * f10nl1);
 }
 
-dbl f1gq(cdbl rho) {
+dbl f1gq(cdbl rho, cdbl nl) {
+  (void)nl;
   cdbl b = sqrt(1 - rho);
   cdbl lbe = log(b);
   // cdbl lbe2 = pow(lbe, 2);
@@ -120,15 +123,15 @@ dbl f1gq(cdbl rho) {
 //   Scale-dependent terms (as in: Nason, Dawson, Ellis '88)
 //==========================================================================
 
-dbl beta0(cdbl nlf) { return (11. / 3. * CA - 4. / 3. * TR * nlf) / (4. * pi); }
+dbl beta0(cdbl nl) { return (11. / 3. * CA - 4. / 3. * TR * nl) / (4. * pi); }
 
-dbl fbarR1qqbar(cdbl rho, cdbl nlf) {
-  cdbl f = 2. * beta0(nlf) * f0qqbar(rho);
+dbl fbarR1qqbar(cdbl rho, cdbl nl) {
+  cdbl f = 2. * beta0(nl) * f0qqbar(rho, nl);
   return f;
 }
 
-dbl fbarR1gg(cdbl rho, cdbl nlf) {
-  cdbl f = 2. * beta0(nlf) * f0gg(rho);
+dbl fbarR1gg(cdbl rho, cdbl nl) {
+  cdbl f = 2. * beta0(nl) * f0gg(rho, nl);
   return f;
 }
 
@@ -143,31 +146,32 @@ dbl h2(cdbl beta) {
   return f;
 }
 
-dbl fbar1qqbar(cdbl rho, cdbl nlf) {
+dbl fbar1qqbar(cdbl rho, cdbl nl) {
   cdbl beta = sqrt(1 - rho);
-  // double nlf = 5;
+  // double nl = 5;
   cdbl f = (2 * rho * log((1 + beta) / (1 - beta))) / (81. * pi) +
-           f0qqbar(rho) *
-               (-(-127 + 6 * nlf) / (72. * pow(pi, 2)) + (2 * log(rho / (4. * pow(beta, 2)))) / (3. * pow(pi, 2)));
+           f0qqbar(rho, nl) *
+               (-(-127 + 6 * nl) / (72. * pow(pi, 2)) + (2 * log(rho / (4. * pow(beta, 2)))) / (3. * pow(pi, 2)));
   return f * 4. * pi;
 }
 
-dbl fbarF1qqbar(cdbl rho, cdbl nlf) { return fbar1qqbar(rho, nlf) - fbarR1qqbar(rho, nlf); }
+dbl fbarF1qqbar(cdbl rho, cdbl nl) { return fbar1qqbar(rho, nl) - fbarR1qqbar(rho, nl); }
 
-dbl fbar1gg(cdbl rho) {
+dbl fbar1gg(cdbl rho, cdbl nl) {
   cdbl beta = sqrt(1 - rho);
   cdbl f = (-181 * beta) / (1440. * pi) + (26 * beta * rho) / (45. * pi) - (2483 * beta * pow(rho, 2)) / (1920. * pi) +
            (-rho / (8. * pi) + pow(rho, 2) / (16. * pi) - pow(rho, 3) / (256. * pi)) * h1(beta) +
            (rho / (8. * pi) + pow(rho, 2) / (8. * pi) + pow(rho, 3) / (128. * pi)) * h2(beta) +
            ((-3 * rho) / (8. * pi) + (33 * pow(rho, 2)) / (128. * pi) + (59 * pow(rho, 3)) / (768. * pi)) *
                log((1 + beta) / (1 - beta)) +
-           (3 * f0gg(rho) * log(rho / (4. * pow(beta, 2)))) / (2. * pow(pi, 2));
+           (3 * f0gg(rho, nl) * log(rho / (4. * pow(beta, 2)))) / (2. * pow(pi, 2));
   return f * 4. * pi;
 }
 
-dbl fbarF1gg(cdbl rho, cdbl nlf) { return fbar1gg(rho) - fbarR1gg(rho, nlf); }
+dbl fbarF1gg(cdbl rho, cdbl nl) { return fbar1gg(rho, nl) - fbarR1gg(rho, nl); }
 
-dbl fbarF1gq(cdbl rho) {
+dbl fbarF1gq(cdbl rho, cdbl nl) {
+  (void)nl;
   cdbl beta = sqrt(1 - rho);
   cdbl f = (-181 * beta) / (6480. * pi) + (289 * beta * rho) / (2160. * pi) -
            (1319 * beta * pow(rho, 2)) / (25920. * pi) + (-rho / (72. * pi) + pow(rho, 2) / (144. * pi)) * h1(beta) +
@@ -176,6 +180,34 @@ dbl fbarF1gq(cdbl rho) {
   return f * 4. * pi;
 }
 
+///@}
+
+/** @name Coefficient function collections */
+///@{
+
+/** @brief Single coefficient function */
+typedef dbl (*coeff)(cdbl rho, cdbl nl);
+
+/** @brief Map of coefficient functions */
+struct CoeffMap {
+  /** @brief LO */
+  coeff f0;
+  /** @brief NLO */
+  coeff f1;
+  /** @brief NLO fact. SV */
+  coeff fbarF1;
+  /** @brief NLO ren. SV */
+  coeff fbarR1;
+};
+
+/** @brief gluon-gluon channel */
+const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg};
+
+/** @brief quark-antiquark channel */
+const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar};
+
+/** @brief gluon-quark channel */
+const CoeffMap gq = {0, f1gq, fbarF1gq, 0};
 ///@}
 
 }  // namespace MaunaKea

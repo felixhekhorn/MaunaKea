@@ -28,8 +28,41 @@ class Kernel : public HepSource::Integrand {
   std::unique_ptr<PineAPPL::Grid> grid;
   /** @brief reference PDF */
   std::unique_ptr<LHAPDF::PDF> pdf;
+  /** @brief factorization scale */
+  dbl muF2;
   /** @brief strong coupling constant */
   dbl as;
+
+  /** @brief Integration variables */
+  struct IntVars {
+    cdbl beta_min = 0.;
+    cdbl x1_max = 1.;
+    dbl beta_max = dblNaN;
+    dbl rho = dblNaN;
+    dbl rho_h = dblNaN;
+    dbl x1 = dblNaN;
+    dbl x2 = dblNaN;
+    dbl jac = dblNaN;
+    dbl norm = dblNaN;
+    dbl common_weight = dblNaN;
+    dbl vegas_weight = dblNaN;
+
+    void update(cdbl a0, cdbl a1, cdbl vegas_weight) {
+      cdbl beta = this->beta_min + (this->beta_max - this->beta_min) * a0;
+      this->rho = 1 - beta * beta;
+      cdbl tau = rho_h / rho;
+      cdbl x1_min = tau;
+      this->x1 = x1_min + (this->x1_max - x1_min) * a1;
+      this->x2 = tau / x1;
+      cdbl raw_jac = 2. * beta / this->rho / this->x1;
+      cdbl jac = raw_jac * (this->beta_max - this->beta_min) * (this->x1_max - x1_min);
+      this->common_weight = this->norm * jac;
+      this->vegas_weight = vegas_weight;
+    }
+  };
+
+  /** @brief integration variables */
+  IntVars v;
 
   /** @name Order mapping */
   ///@{
@@ -55,6 +88,40 @@ class Kernel : public HepSource::Integrand {
 
   /** @brief hide inherited assignment */
   using HepSource::Integrand::operator=;
+
+  dbl fill_gg() const {
+    dbl tot = 0.;
+    cdbl gg = this->pdf->xfxQ2(21, this->v.x1, this->muF2) * this->pdf->xfxQ2(21, this->v.x2, this->muF2);
+    // LO
+    if ((this->order_mask & ORDER_LO) == ORDER_LO) {
+      cdbl weight = this->v.common_weight * f0gg(this->v.rho, this->nl);
+      this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_LO, 0.5, IDX_FLAVOR_GG,
+                       weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+      tot += weight * gg * pow(this->as, 2);
+    }
+    // NLO
+    if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
+      {  // bare
+        cdbl weight = this->v.common_weight * f1gg(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GG,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        tot += weight * gg * pow(this->as, 3);
+      }
+      {  // R SV
+        cdbl weight = this->v.common_weight * fbarR1gg(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_GG,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        // tot += weight * gg * pow(this->as, 3);
+      }
+      {  // F SV
+        cdbl weight = this->v.common_weight * fbarF1gg(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GG,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        // tot += weight * gg * pow(this->as, 3);
+      }
+    }
+    return tot;
+  }
 
  public:
   /** @name Order masks */
@@ -87,7 +154,11 @@ class Kernel : public HepSource::Integrand {
    * @param nl number of light flavors
    */
   Kernel(cdbl m2, cuint nl, cuint order_mask, cuint flavor_mask)
-      : m2(m2), nl(nl), order_mask(order_mask), flavor_mask(flavor_mask) {}
+      : m2(m2), nl(nl), order_mask(order_mask), flavor_mask(flavor_mask) {
+    // 1/m2 to get the dimension correct + convert to pb
+    this->v.norm = 0.38937966e9 / this->m2;
+    this->muF2 = this->m2;
+  }
 
   /**
    * @brief Set hadronic Mandelstam \f$S_h\f$
@@ -96,6 +167,8 @@ class Kernel : public HepSource::Integrand {
   void setHadronicS(cdbl Sh) {
     this->rho_h = 4. * this->m2 / Sh;
     this->beta_h = sqrt(1. - this->rho_h);
+    this->v.beta_max = this->beta_h;
+    this->v.rho_h = this->rho_h;
   }
 
   /**
@@ -122,55 +195,15 @@ class Kernel : public HepSource::Integrand {
    * @param aux unadapted continuous integration variables
    * @param f output
    */
-  void operator()(const double x[], const int k[], const double& vegas_weight, cdbl aux[], double f[]) {
+  void operator()(const double x[], const int k[], const double& vegas_weight, const double aux[], double f[]) {
     (void)k;
     (void)aux;
-    cdbl beta_min = 0.;
-    cdbl beta_max = this->beta_h;
-    cdbl beta = beta_min + (beta_max - beta_min) * x[0];
-    cdbl rho = 1 - beta * beta;
-    cdbl tau = rho_h / rho;
-    cdbl x1_min = tau;
-    cdbl x1_max = 1.;
-    cdbl x1 = x1_min + (x1_max - x1_min) * x[1];
-    cdbl x2 = tau / x1;
-    cdbl raw_jac = 2. * beta / rho / x1;
-    cdbl jac = raw_jac * (beta_max - beta_min) * (x1_max - x1_min);
-    // 1/m2 to get the dimension correct + convert to pb
-    cdbl norm = 0.38937966e9 / this->m2;
-    cdbl common_weight = norm * jac;
-    cdbl mu2 = this->m2;
+    this->v.update(x[0], x[1], vegas_weight);
     // Collect all pieces
     dbl tot = 0.;
     // gluon-gluon channel
-    if ((this->flavor_mask & FLAVOR_GG) == FLAVOR_GG) {
-      cdbl gg = this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(21, x2, mu2);
-      // LO
-      if ((this->order_mask & ORDER_LO) == ORDER_LO) {
-        cdbl weight = common_weight * f0gg(rho);
-        this->grid->fill(x1, x2, mu2, IDX_ORDER_LO, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
-        tot += weight * gg * pow(this->as, 2);
-      }
-      // NLO
-      if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-        {  // bare
-          cdbl weight = common_weight * f1gg(rho, this->nl);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
-          tot += weight * gg * pow(this->as, 3);
-        }
-        {  // R SV
-          cdbl weight = common_weight * fbarR1gg(rho, this->nl);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
-          // tot += weight * gg * pow(this->as, 3);
-        }
-        {  // F SV
-          cdbl weight = common_weight * fbarF1gg(rho, this->nl);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
-          // tot += weight * gg * pow(this->as, 3);
-        }
-      }
-    }
-    // quark-antiquark channel
+    if ((this->flavor_mask & FLAVOR_GG) == FLAVOR_GG) tot += this->fill_gg();
+    /*// quark-antiquark channel
     if ((this->flavor_mask & FLAVOR_QQBAR) == FLAVOR_QQBAR) {
       dbl qqbar = 0.;
       for (uint pid = 1; pid <= this->nl; ++pid) {
@@ -221,7 +254,7 @@ class Kernel : public HepSource::Integrand {
           // tot += weight * gq * pow(this->as, 3);
         }
       }
-    }
+    }*/
     f[0] = tot;
   }
 
