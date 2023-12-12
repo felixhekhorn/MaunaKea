@@ -159,12 +159,12 @@ class Kernel : public HepSource::Integrand {
           tot += weight * gg * pow(this->as, 3);
         }
         {  // R SV
-          cdbl weight = common_weight * f1gg_barR(rho, this->nl);
+          cdbl weight = common_weight * fbarR1gg(rho, this->nl);
           this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
           // tot += weight * gg * pow(this->as, 3);
         }
         {  // F SV
-          cdbl weight = common_weight * (f1gg_bar(rho) - f1gg_barR(rho, this->nl));
+          cdbl weight = common_weight * fbarF1gg(rho, this->nl);
           this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
           // tot += weight * gg * pow(this->as, 3);
         }
@@ -190,12 +190,12 @@ class Kernel : public HepSource::Integrand {
           tot += weight * qqbar * pow(this->as, 3);
         }
         {  // R SV
-          cdbl weight = common_weight * f1qqbar_barR(rho, this->nl);
+          cdbl weight = common_weight * fbarR1qqbar(rho, this->nl);
           this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
           // tot += weight * qqbar * pow(this->as, 3);
         }
         {  // F SV
-          cdbl weight = common_weight * (f1qqbar_bar(rho, this->nl) - f1qqbar_barR(rho, this->nl));
+          cdbl weight = common_weight * fbarF1qqbar(rho, this->nl);
           this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
           // tot += weight * qqbar * pow(this->as, 3);
         }
@@ -216,7 +216,7 @@ class Kernel : public HepSource::Integrand {
           tot += weight * gq * pow(this->as, 3);
         }
         {  // F SV
-          cdbl weight = common_weight * f1gq_bar(rho);
+          cdbl weight = common_weight * fbarF1gq(rho);
           this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GQ, weight * vegas_weight * x1 * x2);
           // tot += weight * gq * pow(this->as, 3);
         }

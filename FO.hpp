@@ -120,6 +120,18 @@ dbl f1gq(cdbl rho) {
 //   Scale-dependent terms (as in: Nason, Dawson, Ellis '88)
 //==========================================================================
 
+dbl beta0(cdbl nlf) { return (11. / 3. * CA - 4. / 3. * TR * nlf) / (4. * pi); }
+
+dbl fbarR1qqbar(cdbl rho, cdbl nlf) {
+  cdbl f = 2. * beta0(nlf) * f0qqbar(rho);
+  return f;
+}
+
+dbl fbarR1gg(cdbl rho, cdbl nlf) {
+  cdbl f = 2. * beta0(nlf) * f0gg(rho);
+  return f;
+}
+
 dbl h1(cdbl beta) {
   cdbl f = -2 * gsl_sf_dilog((1 - beta) / 2.) + 2 * gsl_sf_dilog((1 + beta) / 2.) - pow(log((1 - beta) / 2.), 2) +
            pow(log((1 + beta) / 2.), 2);
@@ -131,7 +143,7 @@ dbl h2(cdbl beta) {
   return f;
 }
 
-dbl f1qqbar_bar(cdbl rho, cdbl nlf) {
+dbl fbar1qqbar(cdbl rho, cdbl nlf) {
   cdbl beta = sqrt(1 - rho);
   // double nlf = 5;
   cdbl f = (2 * rho * log((1 + beta) / (1 - beta))) / (81. * pi) +
@@ -140,19 +152,9 @@ dbl f1qqbar_bar(cdbl rho, cdbl nlf) {
   return f * 4. * pi;
 }
 
-dbl beta0(cdbl nlf) { return (11. / 3. * CA - 4. / 3. * TR * nlf) / (4. * pi); }
+dbl fbarF1qqbar(cdbl rho, cdbl nlf) { return fbar1qqbar(rho, nlf) - fbarR1qqbar(rho, nlf); }
 
-dbl f1qqbar_barR(cdbl rho, cdbl nlf) {
-  cdbl f = 2. * beta0(nlf) * f0qqbar(rho);
-  return f;
-}
-
-dbl f1gg_barR(cdbl rho, cdbl nlf) {
-  cdbl f = 2. * beta0(nlf) * f0gg(rho);
-  return f;
-}
-
-dbl f1gg_bar(cdbl rho) {
+dbl fbar1gg(cdbl rho) {
   cdbl beta = sqrt(1 - rho);
   cdbl f = (-181 * beta) / (1440. * pi) + (26 * beta * rho) / (45. * pi) - (2483 * beta * pow(rho, 2)) / (1920. * pi) +
            (-rho / (8. * pi) + pow(rho, 2) / (16. * pi) - pow(rho, 3) / (256. * pi)) * h1(beta) +
@@ -163,7 +165,9 @@ dbl f1gg_bar(cdbl rho) {
   return f * 4. * pi;
 }
 
-dbl f1gq_bar(cdbl rho) {
+dbl fbarF1gg(cdbl rho, cdbl nlf) { return fbar1gg(rho) - fbarR1gg(rho, nlf); }
+
+dbl fbarF1gq(cdbl rho) {
   cdbl beta = sqrt(1 - rho);
   cdbl f = (-181 * beta) / (6480. * pi) + (289 * beta * rho) / (2160. * pi) -
            (1319 * beta * pow(rho, 2)) / (25920. * pi) + (-rho / (72. * pi) + pow(rho, 2) / (144. * pi)) * h1(beta) +
