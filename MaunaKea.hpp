@@ -11,17 +11,19 @@ namespace MaunaKea {
 class MaunaKea {
   /** @brief Integration kernel */
   Kernel k;
+  /** @brief Integration output */
+  IntegrationOutput intOut;
 
  public:
   /** @brief Integration configuration */
   IntegrationConfig intCfg;
-  /** @brief Integration output */
-  IntegrationOutput intOut;
 
   /**
    * @brief Constructor
    * @param m2 heavy quark mass
    * @param nl number of light flavors
+   * @param order_mask active orders
+   * @param flavor_mask active flavors
    */
   MaunaKea(cdbl m2, cuint nl, cuint order_mask, cuint flavor_mask) : k(m2, nl, order_mask, flavor_mask) {
     this->intCfg.MC_warmupCalls = 1000;
@@ -61,6 +63,12 @@ class MaunaKea {
    * @param fp file path
    */
   void write(const str fp) const { this->k.writeGrid(fp); }
+
+  /**
+   * @brief Copy of current integration output
+   * @return Integration output
+   */
+  IntegrationOutput get_integration_output() const { return IntegrationOutput(this->intOut); }
 };
 }  // namespace MaunaKea
 #endif  // MAUNAKEA_HPP_
