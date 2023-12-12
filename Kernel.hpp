@@ -37,6 +37,10 @@ class Kernel : public HepSource::Integrand {
   static cuint IDX_ORDER_LO = 0;
   /** @brief NLO position */
   static cuint IDX_ORDER_NLO = 1;
+  /** @brief NLO ren. SV position */
+  static cuint IDX_ORDER_NLO_R = 2;
+  /** @brief NLO fact. SV position */
+  static cuint IDX_ORDER_NLO_F = 3;
   ///@}
 
   /** @name Channel mapping */
@@ -149,10 +153,21 @@ class Kernel : public HepSource::Integrand {
       }
       // NLO
       if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-        // bare
-        cdbl weight = common_weight * f1gg(rho, this->nl);
-        this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
-        tot += weight * gg * pow(this->as, 3);
+        {  // bare
+          cdbl weight = common_weight * f1gg(rho, this->nl);
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
+          tot += weight * gg * pow(this->as, 3);
+        }
+        {  // R SV
+          cdbl weight = common_weight * f1gg_barR(rho, this->nl);
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
+          // tot += weight * gg * pow(this->as, 3);
+        }
+        {  // F SV
+          cdbl weight = common_weight * (f1gg_bar(rho) - f1gg_barR(rho, this->nl));
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GG, weight * vegas_weight * x1 * x2);
+          // tot += weight * gg * pow(this->as, 3);
+        }
       }
     }
     // quark-antiquark channel
@@ -169,10 +184,21 @@ class Kernel : public HepSource::Integrand {
       }
       // NLO
       if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-        // bare
-        cdbl weight = common_weight * f1qqbar(rho, this->nl);
-        this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
-        tot += weight * qqbar * pow(this->as, 3);
+        {  // bare
+          cdbl weight = common_weight * f1qqbar(rho, this->nl);
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
+          tot += weight * qqbar * pow(this->as, 3);
+        }
+        {  // R SV
+          cdbl weight = common_weight * f1qqbar_barR(rho, this->nl);
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
+          // tot += weight * qqbar * pow(this->as, 3);
+        }
+        {  // F SV
+          cdbl weight = common_weight * (f1qqbar_bar(rho, this->nl) - f1qqbar_barR(rho, this->nl));
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
+          // tot += weight * qqbar * pow(this->as, 3);
+        }
       }
     }
     // gluon-quark channel
@@ -184,9 +210,16 @@ class Kernel : public HepSource::Integrand {
       }
       // NLO
       if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-        cdbl weight = common_weight * f1gq(rho);
-        this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GQ, weight * vegas_weight * x1 * x2);
-        tot += weight * gq * pow(this->as, 3);
+        {  // bare
+          cdbl weight = common_weight * f1gq(rho);
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GQ, weight * vegas_weight * x1 * x2);
+          tot += weight * gq * pow(this->as, 3);
+        }
+        {  // F SV
+          cdbl weight = common_weight * f1gq_bar(rho);
+          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GQ, weight * vegas_weight * x1 * x2);
+          // tot += weight * gq * pow(this->as, 3);
+        }
       }
     }
     f[0] = tot;
@@ -214,7 +247,11 @@ class Kernel : public HepSource::Integrand {
       lumi.add(gq);
     }
 
-    std::vector<PineAPPL::Order> orders = {PineAPPL::Order{2, 0, 0, 0}, PineAPPL::Order{3, 0, 0, 0}};
+    std::vector<PineAPPL::Order> orders = {// LO
+                                           PineAPPL::Order{2, 0, 0, 0},
+                                           // NLO
+                                           PineAPPL::Order{3, 0, 0, 0}, PineAPPL::Order{3, 0, 1, 0},
+                                           PineAPPL::Order{3, 0, 0, 1}};
 
     // fully-inclusive cross-section
     std::vector<double> bins = {0.0, 1.0};
@@ -239,18 +276,6 @@ class Kernel : public HepSource::Integrand {
 };
 }  // namespace MaunaKea
 
-// if ((p->partonchannel)=="qqbar")
-// {
-// f = (p->Flux).fluxqqbar(x) * (p->FO).FOqqbar((p->rho)/x) ;
-// }
-// else if ((p->partonchannel)=="gg")
-// {
-// f = (p->Flux).fluxgg(x) * (p->FO).FOgg((p->rho)/x) ;
-// }
-// else if ((p->partonchannel)=="qg")
-// {
-// f = (p->Flux).fluxgq(x) * (p->FO).FOgq((p->rho)/x) ;
-// }
 // else if ((p->partonchannel)=="qq")
 // {
 // f = (p->Flux).fluxqq(x) * (p->FO).FOqq((p->rho)/x) ;

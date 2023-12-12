@@ -5,13 +5,13 @@ int main() {
   cdbl m2 = pow(172.5, 2);
   cdbl S_h = pow(8e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::FLAVOR_ALL);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::FLAVOR_ALL);
   mk.setHadronicS(S_h);
   mk.setPDF("NNPDF40_nnlo_as_01180", 0);
   // fill the grid
   mk.run();
   const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
-  printf("res: %e +- %e [pb]\n", intOut.result, intOut.error);
+  printf("sigma_tot = %e +- %e [pb]\n", intOut.result, intOut.error);
   // save
   mk.write("MaunaKea.pineappl.lz4");
   return EXIT_SUCCESS;

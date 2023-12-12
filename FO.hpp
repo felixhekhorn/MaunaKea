@@ -1,7 +1,14 @@
 #ifndef FO_HPP_
 #define FO_HPP_
 
+#include <gsl/gsl_sf.h>
+
 #include "./config.h"
+
+// some global constants
+#define pi M_PI
+#define CA 3.0
+#define TR 0.5
 
 namespace MaunaKea {
 
@@ -9,14 +16,14 @@ namespace MaunaKea {
 ///@{
 dbl f0gg(cdbl rho) {
   cdbl beta = sqrt(1 - rho);
-  cdbl f = M_PI * beta * (rho / 192.) *
-           ((pow(rho, 2) + 16 * rho + 16) * log((1 + beta) / (1 - beta)) / beta - 28 - 31 * rho);
+  cdbl f =
+      pi * beta * (rho / 192.) * ((pow(rho, 2) + 16 * rho + 16) * log((1 + beta) / (1 - beta)) / beta - 28 - 31 * rho);
   return f;
 }
 
 dbl f0qqbar(cdbl rho) {
   cdbl beta = sqrt(1 - rho);
-  return M_PI * beta * rho / 27. * (2 + rho);
+  return pi * beta * rho / 27. * (2 + rho);
 }
 ///@}
 
@@ -107,6 +114,62 @@ dbl f1gq(cdbl rho) {
                 0.0299903911910146112 * b2 * lrho3 * rho - 0.000427110882824291123 * b2 * lrho4 * rho -
                 0.00001115993665476662179 * b2 * lrho5 * rho;
   return f10nl0;
+}
+
+//==========================================================================
+//   Scale-dependent terms (as in: Nason, Dawson, Ellis '88)
+//==========================================================================
+
+dbl h1(cdbl beta) {
+  cdbl f = -2 * gsl_sf_dilog((1 - beta) / 2.) + 2 * gsl_sf_dilog((1 + beta) / 2.) - pow(log((1 - beta) / 2.), 2) +
+           pow(log((1 + beta) / 2.), 2);
+  return f;
+}
+
+dbl h2(cdbl beta) {
+  cdbl f = -gsl_sf_dilog((-2 * beta) / (1 - beta)) + gsl_sf_dilog((2 * beta) / (1 + beta));
+  return f;
+}
+
+dbl f1qqbar_bar(cdbl rho, cdbl nlf) {
+  cdbl beta = sqrt(1 - rho);
+  // double nlf = 5;
+  cdbl f = (2 * rho * log((1 + beta) / (1 - beta))) / (81. * pi) +
+           f0qqbar(rho) *
+               (-(-127 + 6 * nlf) / (72. * pow(pi, 2)) + (2 * log(rho / (4. * pow(beta, 2)))) / (3. * pow(pi, 2)));
+  return f * 4. * pi;
+}
+
+dbl beta0(cdbl nlf) { return (11. / 3. * CA - 4. / 3. * TR * nlf) / (4. * pi); }
+
+dbl f1qqbar_barR(cdbl rho, cdbl nlf) {
+  cdbl f = 2. * beta0(nlf) * f0qqbar(rho);
+  return f;
+}
+
+dbl f1gg_barR(cdbl rho, cdbl nlf) {
+  cdbl f = 2. * beta0(nlf) * f0gg(rho);
+  return f;
+}
+
+dbl f1gg_bar(cdbl rho) {
+  cdbl beta = sqrt(1 - rho);
+  cdbl f = (-181 * beta) / (1440. * pi) + (26 * beta * rho) / (45. * pi) - (2483 * beta * pow(rho, 2)) / (1920. * pi) +
+           (-rho / (8. * pi) + pow(rho, 2) / (16. * pi) - pow(rho, 3) / (256. * pi)) * h1(beta) +
+           (rho / (8. * pi) + pow(rho, 2) / (8. * pi) + pow(rho, 3) / (128. * pi)) * h2(beta) +
+           ((-3 * rho) / (8. * pi) + (33 * pow(rho, 2)) / (128. * pi) + (59 * pow(rho, 3)) / (768. * pi)) *
+               log((1 + beta) / (1 - beta)) +
+           (3 * f0gg(rho) * log(rho / (4. * pow(beta, 2)))) / (2. * pow(pi, 2));
+  return f * 4. * pi;
+}
+
+dbl f1gq_bar(cdbl rho) {
+  cdbl beta = sqrt(1 - rho);
+  cdbl f = (-181 * beta) / (6480. * pi) + (289 * beta * rho) / (2160. * pi) -
+           (1319 * beta * pow(rho, 2)) / (25920. * pi) + (-rho / (72. * pi) + pow(rho, 2) / (144. * pi)) * h1(beta) +
+           ((-17 * rho) / (432. * pi) + pow(rho, 2) / (128. * pi) + (7 * pow(rho, 3)) / (1728. * pi)) *
+               log((1 + beta) / (1 - beta));
+  return f * 4. * pi;
 }
 
 ///@}
