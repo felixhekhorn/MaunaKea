@@ -516,6 +516,11 @@ dbl f2gq(cdbl rho, cdbl nl) {
   return f20;
 }
 
+dbl fbarR2gq(cdbl rho, cdbl nl) {
+  cdbl f = -3. * beta0(nl) * f1gq(rho, nl);
+  return f;
+}
+
 //=======================================================================
 // The NNLO functions (no scale-logs) for qq-, qq'- and qqbar'-reactions
 //=======================================================================
@@ -635,7 +640,7 @@ const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg, 0, 0, 0, 0, 0};
 const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar, f2qqbar, 0, 0, 0, 0, 0};
 
 /** @brief gluon-quark channel */
-const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq, 0, 0, 0, 0, 0};
+const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq, 0, fbarR2gq, 0, 0, 0};
 
 /** @brief quark-quark channel */
 const CoeffMap qq = {0, 0, 0, 0, f2qq, fbarF2qq, 0, fbarFF2qqprime, 0, 0};
