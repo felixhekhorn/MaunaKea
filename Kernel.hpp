@@ -292,21 +292,23 @@ class Kernel : public HepSource::Integrand {
     this->v.update(x[0], x[1], vegas_weight);
     // Collect all pieces
     dbl tot = 0.;
+    // wrap repetition
+#define addLumiChannel(BIG, small)                                                        \
+  if ((this->lumi_mask & this->LUMI_##BIG) == this->LUMI_##BIG) {                         \
+    tot += this->fillLumi(this->flux_##small(), this->IDX_LUMI_##BIG, FixedOrder::small); \
+  }
     // gluon-gluon channel
-    if ((this->lumi_mask & LUMI_GG) == LUMI_GG) tot += this->fillLumi(this->flux_gg(), IDX_LUMI_GG, FixedOrder::gg);
+    addLumiChannel(GG, gg);
     // quark-antiquark channel
-    if ((this->lumi_mask & LUMI_QQBAR) == LUMI_QQBAR)
-      tot += this->fillLumi(this->flux_qqbar(), IDX_LUMI_QQBAR, FixedOrder::qqbar);
+    addLumiChannel(QQBAR, qqbar);
     // gluon-quark channel
-    if ((this->lumi_mask & LUMI_GQ) == LUMI_GQ) tot += this->fillLumi(this->flux_gq(), IDX_LUMI_GQ, FixedOrder::gq);
+    addLumiChannel(GQ, gq);
     // quark-quark channel
-    if ((this->lumi_mask & LUMI_QQ) == LUMI_QQ) tot += this->fillLumi(this->flux_qq(), IDX_LUMI_QQ, FixedOrder::qq);
+    addLumiChannel(QQ, qq);
     // quark-antiquark' channel
-    if ((this->lumi_mask & LUMI_QQBARPRIME) == LUMI_QQBARPRIME)
-      tot += this->fillLumi(this->flux_qqbarprime(), IDX_LUMI_QQBARPRIME, FixedOrder::qqbarprime);
+    addLumiChannel(QQBARPRIME, qqbarprime);
     // quark-quark' channel
-    if ((this->lumi_mask & LUMI_QQPRIME) == LUMI_QQPRIME)
-      tot += this->fillLumi(this->flux_qqprime(), IDX_LUMI_QQPRIME, FixedOrder::qqprime);
+    addLumiChannel(QQPRIME, qqprime);
     f[0] = tot;
   }
 
