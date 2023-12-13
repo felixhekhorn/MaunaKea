@@ -18,8 +18,8 @@ class Kernel : public HepSource::Integrand {
   uint nl;
   /** @brief active orders by bit */
   uint order_mask;
-  /** @brief active flavors by bit */
-  uint flavor_mask;
+  /** @brief active luminosities by bit */
+  uint lumi_mask;
   /** @brief hadronic energy parameter \f$\rho_h = 4m^2/S_h\f$ */
   dbl rho_h;
   /** @brief hadronic energy parameter \f$\beta_h = \sqrt{1-\rho_h}\f$ */
@@ -76,14 +76,14 @@ class Kernel : public HepSource::Integrand {
   static cuint IDX_ORDER_NLO_F = 3;
   ///@}
 
-  /** @name Channel mapping */
+  /** @name Luminosity mapping */
   ///@{
   /** @brief gluon-gluon position */
-  static cuint IDX_FLAVOR_GG = 0;
+  static cuint IDX_LUMI_GG = 0;
   /** @brief quark-antiquark position */
-  static cuint IDX_FLAVOR_QQBAR = 1;
+  static cuint IDX_LUMI_QQBAR = 1;
   /** @brief gluon-quark position */
-  static cuint IDX_FLAVOR_GQ = 2;
+  static cuint IDX_LUMI_GQ = 2;
   ///@}
 
   /** @brief hide inherited assignment */
@@ -166,26 +166,28 @@ class Kernel : public HepSource::Integrand {
   static cuint ORDER_ALL = ORDER_LO | ORDER_NLO | ORDER_NNLO;
   ///@}
 
-  /** @name Flavor masks */
+  /** @name Luminosity masks */
   ///@{
   /** @brief gluon-gluon marker */
-  static cuint FLAVOR_GG = 1;
+  static cuint LUMI_GG = 1;
   /** @brief quark-antiquark marker */
-  static cuint FLAVOR_QQBAR = 1 << 1;
+  static cuint LUMI_QQBAR = 1 << 1;
   /** @brief gluon-quark marker */
-  static cuint FLAVOR_GQ = 1 << 2;
+  static cuint LUMI_GQ = 1 << 2;
   /** @brief all order marker */
-  static cuint FLAVOR_ALL = FLAVOR_GG | FLAVOR_QQBAR | FLAVOR_GQ;
+  static cuint LUMI_ALL = LUMI_GG | LUMI_QQBAR | LUMI_GQ;
   ///@}
 
   /**
    * @brief Constructor
    * @param m2 heavy quark mass
    * @param nl number of light flavors
+   * @param order_mask active orders
+   * @param lumi_mask active luminosities
    */
-  Kernel(cdbl m2, cuint nl, cuint order_mask, cuint flavor_mask)
-      : m2(m2), nl(nl), order_mask(order_mask), flavor_mask(flavor_mask) {
-    // 1/m2 to get the dimension correct + convert to pb
+  Kernel(cdbl m2, cuint nl, cuint order_mask, cuint lumi_mask)
+      : m2(m2), nl(nl), order_mask(order_mask), lumi_mask(lumi_mask) {
+    // 1/m2 to get the dimension correct and convert to pb
     this->v.norm = 0.38937966e9 / this->m2;
     this->muF2 = this->m2;
   }
@@ -232,14 +234,12 @@ class Kernel : public HepSource::Integrand {
     // Collect all pieces
     dbl tot = 0.;
     // gluon-gluon channel
-    if ((this->flavor_mask & FLAVOR_GG) == FLAVOR_GG)
-      tot += this->fillLumi(this->flux_gg(), IDX_FLAVOR_GG, FixedOrder::gg);
+    if ((this->lumi_mask & LUMI_GG) == LUMI_GG) tot += this->fillLumi(this->flux_gg(), IDX_LUMI_GG, FixedOrder::gg);
     // quark-antiquark channel
-    if ((this->flavor_mask & FLAVOR_QQBAR) == FLAVOR_QQBAR)
-      tot += this->fillLumi(this->flux_qqbar(), IDX_FLAVOR_QQBAR, FixedOrder::qqbar);
+    if ((this->lumi_mask & LUMI_QQBAR) == LUMI_QQBAR)
+      tot += this->fillLumi(this->flux_qqbar(), IDX_LUMI_QQBAR, FixedOrder::qqbar);
     // gluon-quark channel
-    if ((this->flavor_mask & FLAVOR_GQ) == FLAVOR_GQ)
-      tot += this->fillLumi(this->flux_gq(), IDX_FLAVOR_GQ, FixedOrder::gq);
+    if ((this->lumi_mask & LUMI_GQ) == LUMI_GQ) tot += this->fillLumi(this->flux_gq(), IDX_LUMI_GQ, FixedOrder::gq);
     f[0] = tot;
   }
 

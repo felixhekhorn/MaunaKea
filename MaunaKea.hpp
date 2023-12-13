@@ -23,9 +23,9 @@ class MaunaKea {
    * @param m2 heavy quark mass
    * @param nl number of light flavors
    * @param order_mask active orders
-   * @param flavor_mask active flavors
+   * @param lumi_mask active luminosities
    */
-  MaunaKea(cdbl m2, cuint nl, cuint order_mask, cuint flavor_mask) : k(m2, nl, order_mask, flavor_mask) {
+  MaunaKea(cdbl m2, cuint nl, cuint order_mask, cuint lumi_mask) : k(m2, nl, order_mask, lumi_mask) {
     this->intCfg.MC_warmupCalls = 1000;
     this->intCfg.calls = 20000;
   }
