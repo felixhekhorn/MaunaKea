@@ -70,12 +70,22 @@ class Kernel : public HepSource::Integrand {
   static cuint IDX_ORDER_LO = 0;
   /** @brief NLO position */
   static cuint IDX_ORDER_NLO = 1;
-  /** @brief NLO ren. SV position */
+  /** @brief NLO R SV position */
   static cuint IDX_ORDER_NLO_R = 2;
-  /** @brief NLO fact. SV position */
+  /** @brief NLO F SV position */
   static cuint IDX_ORDER_NLO_F = 3;
   /** @brief NNLO position */
   static cuint IDX_ORDER_NNLO = 4;
+  /** @brief NNLO R SV position */
+  static cuint IDX_ORDER_NNLO_R = 5;
+  /** @brief NNLO F SV position */
+  static cuint IDX_ORDER_NNLO_F = 6;
+  /** @brief NNLO RR SV position */
+  static cuint IDX_ORDER_NNLO_RR = 7;
+  /** @brief NNLO RF SV position */
+  static cuint IDX_ORDER_NNLO_RF = 8;
+  /** @brief NNLO FF SV position */
+  static cuint IDX_ORDER_NNLO_FF = 9;
   ///@}
 
   /** @name Luminosity mapping */
@@ -168,10 +178,12 @@ class Kernel : public HepSource::Integrand {
     dbl tot = 0.;
     // LO
     if ((this->order_mask & ORDER_LO) == ORDER_LO) {
-      cdbl weight = this->v.common_weight * m.f0(this->v.rho, this->nl);
-      this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_LO, 0.5, idx_lumi,
-                       weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-      tot += weight * flux * pow(this->as, 2);
+      if (m.f0) {
+        cdbl weight = this->v.common_weight * m.f0(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_LO, 0.5, idx_lumi,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        tot += weight * flux * pow(this->as, 2);
+      }
     }
     // NLO
     if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
@@ -201,6 +213,36 @@ class Kernel : public HepSource::Integrand {
         this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO, 0.5, idx_lumi,
                          weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
         tot += weight * flux * pow(this->as, 4);
+      }
+      if (m.fbarR2) {  // R SV
+        cdbl weight = this->v.common_weight * m.fbarR2(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_R, 0.5, idx_lumi,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        // tot += weight * flux * pow(this->as, 4);
+      }
+      if (m.fbarF2) {  // F SV
+        cdbl weight = this->v.common_weight * m.fbarF2(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_F, 0.5, idx_lumi,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        // tot += weight * flux * pow(this->as, 4);
+      }
+      if (m.fbarRR2) {  // RR SV
+        cdbl weight = this->v.common_weight * m.fbarRR2(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_RR, 0.5, idx_lumi,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        // tot += weight * flux * pow(this->as, 4);
+      }
+      if (m.fbarRF2) {  // RF SV
+        cdbl weight = this->v.common_weight * m.fbarRF2(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_RF, 0.5, idx_lumi,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        // tot += weight * flux * pow(this->as, 4);
+      }
+      if (m.fbarFF2) {  // FF SV
+        cdbl weight = this->v.common_weight * m.fbarFF2(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_FF, 0.5, idx_lumi,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        // tot += weight * flux * pow(this->as, 4);
       }
     }
     return tot;
@@ -367,13 +409,14 @@ class Kernel : public HepSource::Integrand {
       lumi.add(qqprime);
     }
 
-    std::vector<PineAPPL::Order> orders = {// LO
-                                           PineAPPL::Order{2, 0, 0, 0},
-                                           // NLO
-                                           PineAPPL::Order{3, 0, 0, 0}, PineAPPL::Order{3, 0, 1, 0},
-                                           PineAPPL::Order{3, 0, 0, 1},
-                                           // NNLO
-                                           PineAPPL::Order{4, 0, 0, 0}};
+    std::vector<PineAPPL::Order> orders = {
+        // LO
+        PineAPPL::Order{2, 0, 0, 0},
+        // NLO
+        PineAPPL::Order{3, 0, 0, 0}, PineAPPL::Order{3, 0, 1, 0}, PineAPPL::Order{3, 0, 0, 1},
+        // NNLO
+        PineAPPL::Order{4, 0, 0, 0}, PineAPPL::Order{4, 0, 1, 0}, PineAPPL::Order{4, 0, 0, 1},
+        PineAPPL::Order{4, 0, 2, 0}, PineAPPL::Order{4, 0, 1, 1}, PineAPPL::Order{4, 0, 0, 2}};
 
     // fully-inclusive cross-section
     std::vector<double> bins = {0.0, 1.0};

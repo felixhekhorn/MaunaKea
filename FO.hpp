@@ -553,6 +553,49 @@ dbl f2qqbarprime(cdbl rho, cdbl nl) {
   return -0.4768323995789214 * lrho - pow(b, 2) * exp(fexp);
 }
 
+//==========================================================================
+// The scaling functions ~Log(muF^2/m^2) for qq-, qq'- and qqbar'-reactions
+//==========================================================================
+
+// same for all 3 reactions
+dbl fbarFF2qqprime(cdbl rho, cdbl nl) {
+  (void)nl;
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+
+  cdbl fexp = -2.20937 - 99.5512 * pow(b, 2) + 0.394393 * pow(b, 3) + 92.3169 * pow(b, 4) + 3.9297 * pow(b, 5) +
+              4.81762 * pow(b, 8) - 43.9374 * lrho * rho - 6.31738 * pow(lrho, 2) * rho - 48.7898 * lrho * pow(rho, 2) +
+              25.8588 * pow(lrho, 2) * pow(rho, 2) - 7.30711 * lrho * pow(rho, 3);
+  cdbl f = -0.157185 * pow(b, 2) - 0.047419 * lrho + pow(b, 2) * pow(rho, 0.72854) * exp(fexp);
+  return f;
+}
+
+// same for qq' and qqbar'
+dbl fbarF2qqprime(cdbl rho, cdbl nl) {
+  (void)nl;
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+
+  cdbl fexp = -0.07924228 + 211.8104 * pow(b, 2) - 0.4464898 * pow(b, 3) - 196.6873 * pow(b, 4) - 5.141548 * pow(b, 5) -
+              9.448772 * pow(b, 8) + 90.67104 * lrho * rho + 11.02778 * pow(lrho, 2) * rho +
+              104.2288 * lrho * pow(rho, 2) - 55.31094 * pow(lrho, 2) * pow(rho, 2) + 16.62298 * lrho * pow(rho, 3);
+  cdbl f = 1.17852 * pow(b, 2) + 0.254683 * lrho - 1. * pow(b, 2) * pow(rho, 0.4) * exp(fexp);
+  return f;
+}
+
+// for qq only
+dbl fbarF2qq(cdbl rho, cdbl nl) {
+  (void)nl;
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+
+  cdbl fexp = -0.07923334 + 209.7125 * pow(b, 2) - 0.3786914 * pow(b, 3) - 195.7483 * pow(b, 4) - 4.500831 * pow(b, 5) -
+              9.000056 * pow(b, 8) + 89.56873 * lrho * rho + 10.92725 * pow(lrho, 2) * rho +
+              103.6116 * lrho * pow(rho, 2) - 54.04722 * pow(lrho, 2) * pow(rho, 2) + 16.25028 * lrho * pow(rho, 3);
+  cdbl f = 1.17852 * pow(b, 2) + 0.254683 * lrho - 1. * pow(b, 2) * pow(rho, 0.4) * exp(fexp);
+  return f;
+}
+
 ///@}
 
 /** @name Coefficient function collections */
@@ -573,25 +616,35 @@ struct CoeffMap {
   coeff fbarR1;
   /** @brief NNLO */
   coeff f2;
+  /** @brief NNLO F SV */
+  coeff fbarF2;
+  /** @brief NNLO R SV */
+  coeff fbarR2;
+  /** @brief NNLO FF SV */
+  coeff fbarFF2;
+  /** @brief NNLO RF SV */
+  coeff fbarRF2;
+  /** @brief NNLO RR SV */
+  coeff fbarRR2;
 };
 
 /** @brief gluon-gluon channel */
-const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg};
+const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg, 0, 0, 0, 0, 0};
 
 /** @brief quark-antiquark channel */
-const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar, f2qqbar};
+const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar, f2qqbar, 0, 0, 0, 0, 0};
 
 /** @brief gluon-quark channel */
-const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq};
+const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq, 0, 0, 0, 0, 0};
 
 /** @brief quark-quark channel */
-const CoeffMap qq = {0, 0, 0, 0, f2qq};
+const CoeffMap qq = {0, 0, 0, 0, f2qq, fbarF2qq, 0, fbarFF2qqprime, 0, 0};
 
-/** @brief quark-quark channel */
-const CoeffMap qqbarprime = {0, 0, 0, 0, f2qqbarprime};
+/** @brief quark-antiquark' channel */
+const CoeffMap qqbarprime = {0, 0, 0, 0, f2qqbarprime, fbarF2qqprime, 0, fbarFF2qqprime, 0, 0};
 
-/** @brief quark-quark channel */
-const CoeffMap qqprime = {0, 0, 0, 0, f2qqprime};
+/** @brief quark-quark' channel */
+const CoeffMap qqprime = {0, 0, 0, 0, f2qqprime, fbarF2qqprime, 0, fbarFF2qqprime, 0, 0};
 
 ///@}
 
