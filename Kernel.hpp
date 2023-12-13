@@ -74,6 +74,8 @@ class Kernel : public HepSource::Integrand {
   static cuint IDX_ORDER_NLO_R = 2;
   /** @brief NLO fact. SV position */
   static cuint IDX_ORDER_NLO_F = 3;
+  /** @brief NNLO position */
+  static cuint IDX_ORDER_NNLO = 4;
   ///@}
 
   /** @name Luminosity mapping */
@@ -148,6 +150,15 @@ class Kernel : public HepSource::Integrand {
         this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_F, 0.5, idx_lumi,
                          weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
         // tot += weight * flux * pow(this->as, 3);
+      }
+    }
+    // NNLO
+    if ((this->order_mask & ORDER_NNLO) == ORDER_NNLO) {
+      if (m.f2) {  // bare
+        cdbl weight = this->v.common_weight * m.f2(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO, 0.5, idx_lumi,
+                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
+        tot += weight * flux * pow(this->as, 4);
       }
     }
     return tot;
@@ -269,7 +280,9 @@ class Kernel : public HepSource::Integrand {
                                            PineAPPL::Order{2, 0, 0, 0},
                                            // NLO
                                            PineAPPL::Order{3, 0, 0, 0}, PineAPPL::Order{3, 0, 1, 0},
-                                           PineAPPL::Order{3, 0, 0, 1}};
+                                           PineAPPL::Order{3, 0, 0, 1},
+                                           // NNLO
+                                           PineAPPL::Order{4, 0, 0, 0}};
 
     // fully-inclusive cross-section
     std::vector<double> bins = {0.0, 1.0};
