@@ -89,35 +89,65 @@ class Kernel : public HepSource::Integrand {
   /** @brief hide inherited assignment */
   using HepSource::Integrand::operator=;
 
-  dbl fill_gg() const {
-    dbl tot = 0.;
+  /** @brief gluon-gluon flux */
+  dbl flux_gg() const {
     cdbl gg = this->pdf->xfxQ2(21, this->v.x1, this->muF2) * this->pdf->xfxQ2(21, this->v.x2, this->muF2);
+    return gg;
+  }
+
+  /** @brief quark-antiquark flux */
+  dbl flux_qqbar() const {
+    dbl qqbar = 0.;
+    for (uint pid = 1; pid <= this->nl; ++pid) {
+      qqbar += 2. * this->pdf->xfxQ2(pid, this->v.x1, this->muF2) * this->pdf->xfxQ2(-pid, this->v.x2, this->muF2);
+    }
+    return qqbar;
+  }
+
+  /** @brief gluon-quark flux */
+  dbl flux_gq() const {
+    dbl gq = 0.;
+    for (uint pid = 1; pid <= this->nl; ++pid) {
+      gq += 2. * this->pdf->xfxQ2(21, this->v.x1, this->muF2) * this->pdf->xfxQ2(-pid, this->v.x2, this->muF2);
+      gq += 2. * this->pdf->xfxQ2(21, this->v.x1, this->muF2) * this->pdf->xfxQ2(pid, this->v.x2, this->muF2);
+    }
+    return gq;
+  }
+
+  /**
+   * @brief Insert a given luminosity into the grid
+   * @param flux flux
+   * @param idx_lumi grid luminosity index
+   * @param m coefficient functions
+   */
+  dbl fillLumi(cdbl flux, cuint idx_lumi, const FixedOrder::CoeffMap m) const {
+    dbl tot = 0.;
     // LO
     if ((this->order_mask & ORDER_LO) == ORDER_LO) {
-      cdbl weight = this->v.common_weight * f0gg(this->v.rho, this->nl);
-      this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_LO, 0.5, IDX_FLAVOR_GG,
+      cdbl weight = this->v.common_weight * m.f0(this->v.rho, this->nl);
+      this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_LO, 0.5, idx_lumi,
                        weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-      tot += weight * gg * pow(this->as, 2);
+      tot += weight * flux * pow(this->as, 2);
     }
     // NLO
     if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-      {  // bare
-        cdbl weight = this->v.common_weight * f1gg(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GG,
+      if (m.f1) {  // bare
+        cdbl weight = this->v.common_weight * m.f1(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO, 0.5, idx_lumi,
                          weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        tot += weight * gg * pow(this->as, 3);
+        tot += weight * flux * pow(this->as, 3);
       }
-      {  // R SV
-        cdbl weight = this->v.common_weight * fbarR1gg(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_GG,
+      if (m.fbarR1) {  // R SV
+        cdbl weight = this->v.common_weight * m.fbarR1(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_R, 0.5, idx_lumi,
                          weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * gg * pow(this->as, 3);
+        // tot += weight * flux * pow(this->as, 3);
       }
-      {  // F SV
-        cdbl weight = this->v.common_weight * fbarF1gg(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GG,
+      if (m.fbarF1) {  // F SV
+        cdbl weight = this->v.common_weight * m.fbarF1(this->v.rho, this->nl);
+        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_F, 0.5, idx_lumi,
                          weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * gg * pow(this->as, 3);
+        // tot += weight * flux * pow(this->as, 3);
       }
     }
     return tot;
@@ -202,59 +232,14 @@ class Kernel : public HepSource::Integrand {
     // Collect all pieces
     dbl tot = 0.;
     // gluon-gluon channel
-    if ((this->flavor_mask & FLAVOR_GG) == FLAVOR_GG) tot += this->fill_gg();
-    /*// quark-antiquark channel
-    if ((this->flavor_mask & FLAVOR_QQBAR) == FLAVOR_QQBAR) {
-      dbl qqbar = 0.;
-      for (uint pid = 1; pid <= this->nl; ++pid) {
-        qqbar += 2. * this->pdf->xfxQ2(pid, x1, mu2) * this->pdf->xfxQ2(-pid, x2, mu2);
-      }
-      // LO
-      if ((this->order_mask & ORDER_LO) == ORDER_LO) {
-        cdbl weight = common_weight * f0qqbar(rho);
-        this->grid->fill(x1, x2, mu2, IDX_ORDER_LO, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
-        tot += weight * qqbar * pow(this->as, 2);
-      }
-      // NLO
-      if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-        {  // bare
-          cdbl weight = common_weight * f1qqbar(rho, this->nl);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
-          tot += weight * qqbar * pow(this->as, 3);
-        }
-        {  // R SV
-          cdbl weight = common_weight * fbarR1qqbar(rho, this->nl);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_R, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
-          // tot += weight * qqbar * pow(this->as, 3);
-        }
-        {  // F SV
-          cdbl weight = common_weight * fbarF1qqbar(rho, this->nl);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_QQBAR, weight * vegas_weight * x1 * x2);
-          // tot += weight * qqbar * pow(this->as, 3);
-        }
-      }
-    }
+    if ((this->flavor_mask & FLAVOR_GG) == FLAVOR_GG)
+      tot += this->fillLumi(this->flux_gg(), IDX_FLAVOR_GG, FixedOrder::gg);
+    // quark-antiquark channel
+    if ((this->flavor_mask & FLAVOR_QQBAR) == FLAVOR_QQBAR)
+      tot += this->fillLumi(this->flux_qqbar(), IDX_FLAVOR_QQBAR, FixedOrder::qqbar);
     // gluon-quark channel
-    if ((this->flavor_mask & FLAVOR_GQ) == FLAVOR_GQ) {
-      dbl gq = 0.;
-      for (uint pid = 1; pid <= this->nl; ++pid) {
-        gq += 2. * this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(-pid, x2, mu2);
-        gq += 2. * this->pdf->xfxQ2(21, x1, mu2) * this->pdf->xfxQ2(pid, x2, mu2);
-      }
-      // NLO
-      if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-        {  // bare
-          cdbl weight = common_weight * f1gq(rho);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO, 0.5, IDX_FLAVOR_GQ, weight * vegas_weight * x1 * x2);
-          tot += weight * gq * pow(this->as, 3);
-        }
-        {  // F SV
-          cdbl weight = common_weight * fbarF1gq(rho);
-          this->grid->fill(x1, x2, mu2, IDX_ORDER_NLO_F, 0.5, IDX_FLAVOR_GQ, weight * vegas_weight * x1 * x2);
-          // tot += weight * gq * pow(this->as, 3);
-        }
-      }
-    }*/
+    if ((this->flavor_mask & FLAVOR_GQ) == FLAVOR_GQ)
+      tot += this->fillLumi(this->flux_gq(), IDX_FLAVOR_GQ, FixedOrder::gq);
     f[0] = tot;
   }
 

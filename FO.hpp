@@ -12,6 +12,9 @@
 
 namespace MaunaKea {
 
+/** @brief Fixed order coefficient functions */
+namespace FixedOrder {
+
 /** @name LO results */
 ///@{
 dbl f0gg(cdbl rho, cdbl nl) {
@@ -209,6 +212,8 @@ const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar};
 /** @brief gluon-quark channel */
 const CoeffMap gq = {0, f1gq, fbarF1gq, 0};
 ///@}
+
+}  // namespace FixedOrder
 
 }  // namespace MaunaKea
 
