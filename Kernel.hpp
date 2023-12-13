@@ -176,74 +176,35 @@ class Kernel : public HepSource::Integrand {
    */
   dbl fillLumi(cdbl flux, cuint idx_lumi, const FixedOrder::CoeffMap m) const {
     dbl tot = 0.;
+    // fill any order
+#define fillOrder(label, k, idx, flag)                                                         \
+  if (m.f##label##k) {                                                                         \
+    cdbl weight = this->v.common_weight * m.f##label##k(this->v.rho, this->nl);                \
+    this->grid->fill(this->v.x1, this->v.x2, this->muF2, this->IDX_ORDER_##idx, 0.5, idx_lumi, \
+                     weight* this->v.vegas_weight* this->v.x1* this->v.x2);                    \
+    tot += weight * flux * pow(this->as, 2 + k) * flag;                                        \
+  }
     // LO
     if ((this->order_mask & ORDER_LO) == ORDER_LO) {
-      if (m.f0) {
-        cdbl weight = this->v.common_weight * m.f0(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_LO, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        tot += weight * flux * pow(this->as, 2);
-      }
+      fillOrder(, 0, LO, 1.);
     }
     // NLO
     if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-      if (m.f1) {  // bare
-        cdbl weight = this->v.common_weight * m.f1(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        tot += weight * flux * pow(this->as, 3);
-      }
-      if (m.fbarR1) {  // R SV
-        cdbl weight = this->v.common_weight * m.fbarR1(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_R, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * flux * pow(this->as, 3);
-      }
-      if (m.fbarF1) {  // F SV
-        cdbl weight = this->v.common_weight * m.fbarF1(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NLO_F, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * flux * pow(this->as, 3);
-      }
+      fillOrder(, 1, NLO, 1.);
+      // SV
+      fillOrder(barR, 1, NLO_R, 0.);
+      fillOrder(barF, 1, NLO_F, 0.);
     }
     // NNLO
     if ((this->order_mask & ORDER_NNLO) == ORDER_NNLO) {
-      if (m.f2) {  // bare
-        cdbl weight = this->v.common_weight * m.f2(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        tot += weight * flux * pow(this->as, 4);
-      }
-      if (m.fbarR2) {  // R SV
-        cdbl weight = this->v.common_weight * m.fbarR2(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_R, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * flux * pow(this->as, 4);
-      }
-      if (m.fbarF2) {  // F SV
-        cdbl weight = this->v.common_weight * m.fbarF2(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_F, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * flux * pow(this->as, 4);
-      }
-      if (m.fbarRR2) {  // RR SV
-        cdbl weight = this->v.common_weight * m.fbarRR2(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_RR, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * flux * pow(this->as, 4);
-      }
-      if (m.fbarRF2) {  // RF SV
-        cdbl weight = this->v.common_weight * m.fbarRF2(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_RF, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * flux * pow(this->as, 4);
-      }
-      if (m.fbarFF2) {  // FF SV
-        cdbl weight = this->v.common_weight * m.fbarFF2(this->v.rho, this->nl);
-        this->grid->fill(this->v.x1, this->v.x2, this->muF2, IDX_ORDER_NNLO_FF, 0.5, idx_lumi,
-                         weight * this->v.vegas_weight * this->v.x1 * this->v.x2);
-        // tot += weight * flux * pow(this->as, 4);
-      }
+      fillOrder(, 2, NNLO, 1.);
+      // SV^1
+      fillOrder(barR, 2, NNLO_R, 0.);
+      fillOrder(barF, 2, NNLO_F, 0.);
+      // SV^2
+      fillOrder(barRR, 2, NNLO_RR, 0.);
+      fillOrder(barRF, 2, NNLO_RF, 0.);
+      fillOrder(barFF, 2, NNLO_FF, 0.);
     }
     return tot;
   }
@@ -334,7 +295,7 @@ class Kernel : public HepSource::Integrand {
     this->v.update(x[0], x[1], vegas_weight);
     // Collect all pieces
     dbl tot = 0.;
-    // wrap repetition
+    // fill any channel
 #define addLumiChannel(BIG, small)                                                        \
   if ((this->lumi_mask & this->LUMI_##BIG) == this->LUMI_##BIG) {                         \
     tot += this->fillLumi(this->flux_##small(), this->IDX_LUMI_##BIG, FixedOrder::small); \
@@ -440,29 +401,5 @@ class Kernel : public HepSource::Integrand {
   void Dvegas_final(cuint iterations) const { this->grid->scale(1. / iterations); }
 };
 }  // namespace MaunaKea
-
-// else if ((p->partonchannel)=="qq")
-// {
-// f = (p->Flux).fluxqq(x) * (p->FO).FOqq((p->rho)/x) ;
-// }
-// else if ((p->partonchannel)=="qqprime")
-// {
-// f = (p->Flux).fluxqqprime(x) * (p->FO).FOqqprime((p->rho)/x) ;
-// }
-// else if ((p->partonchannel)=="qqbarprime")
-// {
-// f = (p->Flux).fluxqqbarprime(x) * (p->FO).FOqqbarprime((p->rho)/x) ;
-// }
-// else//all channels combined
-// {
-// f = (p->Flux).fluxqqbar(x)    * (p->FO).FOqqbar((p->rho)/x)      +
-// (p->Flux).fluxgg(x)         * (p->FO).FOgg((p->rho)/x)         +
-// (p->Flux).fluxgq(x)         * (p->FO).FOgq((p->rho)/x)         +
-// (p->Flux).fluxqq(x)         * (p->FO).FOqq((p->rho)/x)         +
-// (p->Flux).fluxqqprime(x)    * (p->FO).FOqqprime((p->rho)/x)    +
-// (p->Flux).fluxqqbarprime(x) * (p->FO).FOqqbarprime((p->rho)/x) ;
-// }
-// return f/x;
-// }
 
 #endif  // KERNEL_HPP_
