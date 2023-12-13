@@ -86,6 +86,12 @@ class Kernel : public HepSource::Integrand {
   static cuint IDX_LUMI_QQBAR = 1;
   /** @brief gluon-quark position */
   static cuint IDX_LUMI_GQ = 2;
+  /** @brief quark-quark position */
+  static cuint IDX_LUMI_QQ = 3;
+  /** @brief quark-antiquark' position */
+  static cuint IDX_LUMI_QQBARPRIME = 4;
+  /** @brief quark-quark' position */
+  static cuint IDX_LUMI_QQPRIME = 5;
   ///@}
 
   /** @brief hide inherited assignment */
@@ -114,6 +120,42 @@ class Kernel : public HepSource::Integrand {
       gq += 2. * this->pdf->xfxQ2(21, this->v.x1, this->muF2) * this->pdf->xfxQ2(pid, this->v.x2, this->muF2);
     }
     return gq;
+  }
+
+  /** @brief quark-quark flux */
+  dbl flux_qq() const {
+    dbl qq = 0.;
+    for (uint pid = 1; pid <= this->nl; ++pid) {
+      qq += this->pdf->xfxQ2(pid, this->v.x1, this->muF2) * this->pdf->xfxQ2(pid, this->v.x2, this->muF2);
+      qq += this->pdf->xfxQ2(-pid, this->v.x1, this->muF2) * this->pdf->xfxQ2(-pid, this->v.x2, this->muF2);
+    }
+    return qq;
+  }
+
+  /** @brief quark-antiquark' flux */
+  dbl flux_qqbarprime() const {
+    dbl qqbarprime = 0.;
+    for (uint pid1 = 1; pid1 <= this->nl; ++pid1) {
+      for (uint pid2 = 1; pid2 <= this->nl; ++pid2) {
+        if (pid1 == pid2) continue;
+        qqbarprime += this->pdf->xfxQ2(pid1, this->v.x1, this->muF2) * this->pdf->xfxQ2(-pid2, this->v.x2, this->muF2);
+        qqbarprime += this->pdf->xfxQ2(-pid1, this->v.x1, this->muF2) * this->pdf->xfxQ2(pid2, this->v.x2, this->muF2);
+      }
+    }
+    return qqbarprime;
+  }
+
+  /** @brief quark-quark' flux */
+  dbl flux_qqprime() const {
+    dbl qqprime = 0.;
+    for (uint pid1 = 1; pid1 <= this->nl; ++pid1) {
+      for (uint pid2 = 1; pid2 <= this->nl; ++pid2) {
+        if (pid1 == pid2) continue;
+        qqprime += this->pdf->xfxQ2(pid1, this->v.x1, this->muF2) * this->pdf->xfxQ2(pid2, this->v.x2, this->muF2);
+        qqprime += this->pdf->xfxQ2(-pid1, this->v.x1, this->muF2) * this->pdf->xfxQ2(-pid2, this->v.x2, this->muF2);
+      }
+    }
+    return qqprime;
   }
 
   /**
@@ -185,8 +227,14 @@ class Kernel : public HepSource::Integrand {
   static cuint LUMI_QQBAR = 1 << 1;
   /** @brief gluon-quark marker */
   static cuint LUMI_GQ = 1 << 2;
+  /** @brief quark-quark marker */
+  static cuint LUMI_QQ = 1 << 3;
+  /** @brief quark-antiquark' marker */
+  static cuint LUMI_QQBARPRIME = 1 << 4;
+  /** @brief quark-quark' marker */
+  static cuint LUMI_QQPRIME = 1 << 5;
   /** @brief all order marker */
-  static cuint LUMI_ALL = LUMI_GG | LUMI_QQBAR | LUMI_GQ;
+  static cuint LUMI_ALL = LUMI_GG | LUMI_QQBAR | LUMI_GQ | LUMI_QQ | LUMI_QQBARPRIME | LUMI_QQPRIME;
   ///@}
 
   /**
@@ -251,6 +299,14 @@ class Kernel : public HepSource::Integrand {
       tot += this->fillLumi(this->flux_qqbar(), IDX_LUMI_QQBAR, FixedOrder::qqbar);
     // gluon-quark channel
     if ((this->lumi_mask & LUMI_GQ) == LUMI_GQ) tot += this->fillLumi(this->flux_gq(), IDX_LUMI_GQ, FixedOrder::gq);
+    // quark-quark channel
+    if ((this->lumi_mask & LUMI_QQ) == LUMI_QQ) tot += this->fillLumi(this->flux_qq(), IDX_LUMI_QQ, FixedOrder::qq);
+    // quark-antiquark' channel
+    if ((this->lumi_mask & LUMI_QQBARPRIME) == LUMI_QQBARPRIME)
+      tot += this->fillLumi(this->flux_qqbarprime(), IDX_LUMI_QQBARPRIME, FixedOrder::qqbarprime);
+    // quark-quark' channel
+    if ((this->lumi_mask & LUMI_QQPRIME) == LUMI_QQPRIME)
+      tot += this->fillLumi(this->flux_qqprime(), IDX_LUMI_QQPRIME, FixedOrder::qqprime);
     f[0] = tot;
   }
 
@@ -274,6 +330,39 @@ class Kernel : public HepSource::Integrand {
         gq.push_back({21, static_cast<int>(pid), 2.0});
       }
       lumi.add(gq);
+    }
+    // quark-quark channel
+    {
+      std::vector<PineAPPL::LumiEntry> qq;
+      for (uint pid = 1; pid <= this->nl; ++pid) {
+        qq.push_back({static_cast<int>(pid), static_cast<int>(pid), 1.0});
+        qq.push_back({static_cast<int>(-pid), static_cast<int>(-pid), 1.0});
+      }
+      lumi.add(qq);
+    }
+    // quark-antiquark' channel
+    {
+      std::vector<PineAPPL::LumiEntry> qqbarprime;
+      for (uint pid1 = 1; pid1 <= this->nl; ++pid1) {
+        for (uint pid2 = 1; pid2 <= this->nl; ++pid2) {
+          if (pid1 == pid2) continue;
+          qqbarprime.push_back({static_cast<int>(pid1), static_cast<int>(-pid2), 1.0});
+          qqbarprime.push_back({static_cast<int>(-pid1), static_cast<int>(pid2), 1.0});
+        }
+      }
+      lumi.add(qqbarprime);
+    }
+    // quark-quark' channel
+    {
+      std::vector<PineAPPL::LumiEntry> qqprime;
+      for (uint pid1 = 1; pid1 <= this->nl; ++pid1) {
+        for (uint pid2 = 1; pid2 <= this->nl; ++pid2) {
+          if (pid1 == pid2) continue;
+          qqprime.push_back({static_cast<int>(pid1), static_cast<int>(pid2), 1.0});
+          qqprime.push_back({static_cast<int>(-pid1), static_cast<int>(-pid2), 1.0});
+        }
+      }
+      lumi.add(qqprime);
     }
 
     std::vector<PineAPPL::Order> orders = {// LO

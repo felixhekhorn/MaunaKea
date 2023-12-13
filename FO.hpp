@@ -459,6 +459,100 @@ dbl f2qqbar(cdbl rho, cdbl nl) {
   return f;
 }
 
+//=======================================================================
+// The NNLO gq functions (i.e. the ones without scale-logs):
+//=======================================================================
+
+dbl f20nl0_FIT_gq(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl lrho3 = pow(lrho, 3);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl rho2 = pow(rho, 2);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b5 = pow(b, 5);
+  cdbl b6 = pow(b, 6);
+  cdbl b7 = pow(b, 7);
+
+  cdbl f = 28.0998 * b2 + 24.1753 * b3 - 12.3211 * b5 - 49.909 * b7 + 11.7853 * b3 * lbe + 28.6697 * b6 * lbe2 -
+           3.82993 * lrho3 * rho + lrho2 * (-9.80339 * rho - 76.7407 * rho2) + lrho * (-1.68957 + 30.6335 * rho2);
+  return f;
+}
+
+dbl f20nl1_FIT_gq(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl lrho3 = pow(lrho, 3);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl rho2 = pow(rho, 2);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b7 = pow(b, 7);
+
+  cdbl f = 0.363838 * b2 - 1.44391 * b3 + 1.1146 * b7 - 0.309165 * b3 * lbe + 0.990057 * b4 * lbe2 +
+           0.0401411 * lrho3 * rho + 0.362183 * lrho * rho2 + lrho2 * (0.194867 * rho + 1.57274 * rho2);
+  return f;
+}
+
+dbl f2gq(cdbl rho, cdbl nl) {
+  // double nl=5.0;
+  //  the functions fij are normalized as: as^n/m^2
+  //  double f10 = 4*pi*f1gq(rho);
+  //  double f11 = 4*pi*f1gqbar(rho);
+  cdbl f20 = f20nl0_FIT_gq(rho) + nl * f20nl1_FIT_gq(rho);
+  // double f21 = f21nl0_FIT_gq(rho) + nl * f21nl1_FIT_gq(rho);
+  // double f22 = f22nl0_FIT_gq(rho) + nl * f22nl1_FIT_gq(rho);
+
+  // double f = f20 + f21*(lg + lgfr) + f22*(pow(lg,2) + 2.*lg*lgfr + pow(lgfr,2))
+  //   + f10*(-2.626056561016273*lgfr + 0.15915494309189535*lgfr*nl)
+  //   + f11*(-2.626056561016273*lg*lgfr - 2.626056561016273*pow(lgfr,2)
+  //    + (0.15915494309189535*lg*lgfr + 0.15915494309189535*pow(lgfr,2))*nl);
+  return f20;
+}
+
+//=======================================================================
+// The NNLO functions (no scale-logs) for qq-, qq'- and qqbar'-reactions
+//=======================================================================
+
+dbl f2qq(cdbl rho, cdbl nl) {
+  (void)nl;
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+
+  cdbl fexp = -0.740558 - 22.8129 * pow(b, 2) - 0.191648 * pow(b, 3) - 6.58031 * pow(b, 4) - 0.537669 * pow(b, 5) +
+              31.7872 * pow(b, 6) - 21.0783 * lrho * rho - 3.25313 * pow(lrho, 2) * rho - 10.8176 * lrho * pow(rho, 2) +
+              15.8988 * pow(lrho, 2) * pow(rho, 2) + 8.64557 * lrho * pow(rho, 3);
+  return -0.4768323995789214 * lrho - pow(b, 2) * exp(fexp);
+}
+
+dbl f2qqprime(cdbl rho, cdbl nl) {
+  (void)nl;
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+
+  cdbl fexp = -0.740558 - 23.4518 * pow(b, 2) - 0.193073 * pow(b, 3) - 5.97215 * pow(b, 4) - 0.541402 * pow(b, 5) +
+              31.8227 * pow(b, 6) - 21.3725 * lrho * rho - 3.29162 * pow(lrho, 2) * rho - 11.1642 * lrho * pow(rho, 2) +
+              15.9932 * pow(lrho, 2) * pow(rho, 2) + 8.64746 * lrho * pow(rho, 3);
+  return -0.4768323995789214 * lrho - pow(b, 2) * exp(fexp);
+}
+
+dbl f2qqbarprime(cdbl rho, cdbl nl) {
+  (void)nl;
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+
+  cdbl fexp = -0.740572 - 31.2117 * pow(b, 2) - 0.31495 * pow(b, 3) + 15.8601 * pow(b, 4) - 1.64639 * pow(b, 5) +
+              18.9767 * pow(b, 6) - 19.6977 * lrho * rho - 3.16565 * pow(lrho, 2) * rho - 16.1386 * lrho * pow(rho, 2) +
+              12.3828 * pow(lrho, 2) * pow(rho, 2) + 4.17707 * lrho * pow(rho, 3);
+  return -0.4768323995789214 * lrho - pow(b, 2) * exp(fexp);
+}
+
 ///@}
 
 /** @name Coefficient function collections */
@@ -488,7 +582,17 @@ const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg};
 const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar, f2qqbar};
 
 /** @brief gluon-quark channel */
-const CoeffMap gq = {0, f1gq, fbarF1gq, 0, 0};
+const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq};
+
+/** @brief quark-quark channel */
+const CoeffMap qq = {0, 0, 0, 0, f2qq};
+
+/** @brief quark-quark channel */
+const CoeffMap qqbarprime = {0, 0, 0, 0, f2qqbarprime};
+
+/** @brief quark-quark channel */
+const CoeffMap qqprime = {0, 0, 0, 0, f2qqprime};
+
 ///@}
 
 }  // namespace FixedOrder
