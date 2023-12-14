@@ -502,23 +502,123 @@ dbl f20nl1_FIT_gq(cdbl rho) {
 
 dbl f2gq(cdbl rho, cdbl nl) {
   // double nl=5.0;
-  //  the functions fij are normalized as: as^n/m^2
-  //  double f10 = 4*pi*f1gq(rho);
-  //  double f11 = 4*pi*f1gqbar(rho);
+  // the functions fij are normalized as: as^n/m^2
   cdbl f20 = f20nl0_FIT_gq(rho) + nl * f20nl1_FIT_gq(rho);
-  // double f21 = f21nl0_FIT_gq(rho) + nl * f21nl1_FIT_gq(rho);
-  // double f22 = f22nl0_FIT_gq(rho) + nl * f22nl1_FIT_gq(rho);
-
-  // double f = f20 + f21*(lg + lgfr) + f22*(pow(lg,2) + 2.*lg*lgfr + pow(lgfr,2))
-  //   + f10*(-2.626056561016273*lgfr + 0.15915494309189535*lgfr*nl)
-  //   + f11*(-2.626056561016273*lg*lgfr - 2.626056561016273*pow(lgfr,2)
-  //    + (0.15915494309189535*lg*lgfr + 0.15915494309189535*pow(lgfr,2))*nl);
   return f20;
 }
 
-dbl fbarR2gq(cdbl rho, cdbl nl) {
-  cdbl f = -3. * beta0(nl) * f1gq(rho, nl);
+//==========================================================================
+// The scaling functions ~Log(muF^2/m^2) for gq-reaction.
+//
+// Implemented fits: as in ``Hathor" (Aliev et al. arXiv:1007.1327v1)
+//==========================================================================
+
+dbl f21nl0_FIT_gq(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+  cdbl b6 = pow(b, 6);
+  cdbl b7 = pow(b, 7);
+
+  cdbl f =
+      -0.00272708 * b2 - 0.194727 * b3 - 7.74780189742068692567 * b4 - 32.9814144136482376215 * b5 -
+      2168.37139107242508102 * b6 + 2213.66358353965767595 * b7 + 0.62267243714534082136754351670760392811 * b3 * lbe -
+      1.469367779446109471946 * b4 * lbe - 82.4683103579544036772 * b5 * lbe - 739.731611466006394139 * b6 * lbe -
+      1201.795933886655196561 * b7 * lbe - 0.56735789898499726176870600831868545725 * b3 * lbe2 +
+      215.848631557653764823 * b3 * lrho - 1146.873278298064968087 * b4 * lrho + 1744.26195133738780366 * b5 * lrho -
+      1000.346862873385464604 * b6 * lrho + 187.933944366753454585 * b7 * lrho + 291.663849809244439603 * b3 * lrho2 -
+      772.77269566517296654 * b4 * lrho2 + 653.225988602083032794 * b5 * lrho2 - 172.118699492821641978 * b6 * lrho2;
   return f;
+}
+
+dbl f21nl1_FIT_gq(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+  cdbl b6 = pow(b, 6);
+  cdbl b7 = pow(b, 7);
+
+  cdbl f = 0.00554947127181299611557 * b3 + 0.0225430311833103251235 * b4 - 0.63483974233126651067 * b5 +
+           9.99566887547610873574 * b6 - 9.40032480635199279045 * b7 -
+           0.0112980360836839281564331066591599701444 * b3 * lbe + 0.00425431823252394833895 * b4 * lbe +
+           0.252351741613262253035 * b5 * lbe + 2.40450791609598725401 * b6 * lbe + 4.53123563973969674337 * b7 * lbe -
+           1.382674579044874428 * b3 * lrho + 6.3852062287204969368 * b4 * lrho - 8.30987940966125596394 * b5 * lrho +
+           3.65509528520063341522 * b6 * lrho - 0.347592328515009762391 * b7 * lrho -
+           1.263737185806346314577 * b3 * lrho2 + 3.10439060379970187549 * b4 * lrho2 -
+           2.30142593570054254576 * b5 * lrho2 + 0.460779458031490856105 * b6 * lrho2;
+  return f;
+}
+
+dbl f22nl0_FIT_gq(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+  cdbl b6 = pow(b, 6);
+  cdbl b7 = pow(b, 7);
+
+  cdbl f = -0.0956665797118411055 * b3 + 0.0796230395754896639 * b4 - 4.65135359743332977 * b5 +
+           54.2282042897508657 * b6 - 50.3664336690071789 * b7 + 0.094559649830832876961451001386447576209 * b3 * lbe +
+           0.01454877297063897196 * b4 * lbe + 1.090238571394724594 * b5 * lbe + 12.39185329777043355 * b6 * lbe +
+           25.3325922738649971 * b7 * lbe - 8.19094150408542609 * b3 * lrho + 34.1888813941803399 * b4 * lrho -
+           44.3046767125567972 * b5 * lrho + 20.6517749275371715 * b6 * lrho - 2.50412783544030659 * b7 * lrho -
+           6.09708063744189756 * b3 * lrho2 + 16.0087447100660202 * b4 * lrho2 - 12.77595728730197071 * b5 * lrho2 +
+           2.8643356372167124 * b6 * lrho2;
+  return f;
+}
+
+dbl f22nl1_FIT_gq(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+  cdbl b6 = pow(b, 6);
+  cdbl b7 = pow(b, 7);
+
+  cdbl f = 0.00282450625811508503 * b3 + 0.0001125529801773163916 * b4 - 0.0325005325377584271 * b5 +
+           0.171745428117885934 * b6 - 0.1362549485229853436 * b7 + 0.0000160504261251611439 * b4 * lbe +
+           0.00258676966103027447 * b5 * lbe + 0.0358936097435228275 * b6 * lbe + 0.0721640494225125838 * b7 * lbe -
+           0.0404568351507943864 * b3 * lrho + 0.1116658960293489047 * b4 * lrho - 0.1145615544900474319 * b5 * lrho +
+           0.0537148479428972514 * b6 * lrho - 0.01036242513667345341 * b7 * lrho - 0.0253066537137784997 * b3 * lrho2 +
+           0.0551710547372787562 * b4 * lrho2 - 0.0403074509370066612 * b5 * lrho2 +
+           0.01044304642981058897 * b6 * lrho2;
+  return f;
+}
+
+dbl fbarF2gq(cdbl rho, cdbl nl) {
+  cdbl f21 = f21nl0_FIT_gq(rho) + nl * f21nl1_FIT_gq(rho);
+  return f21;
+}
+
+dbl fbarR2gq(cdbl rho, cdbl nl) {
+  cdbl f = 3. * beta0(nl) * f1gq(rho, nl);
+  return f;
+}
+
+dbl fbarRF2gq(cdbl rho, cdbl nl) {
+  cdbl f = 3. * beta0(nl) * fbarF1gq(rho, nl);
+  return f;
+}
+
+dbl fbarFF2gq(cdbl rho, cdbl nl) {
+  cdbl f22 = f22nl0_FIT_gq(rho) + nl * f22nl1_FIT_gq(rho);
+  return f22 - fbarRF2gq(rho, nl);
 }
 
 //=======================================================================
@@ -640,7 +740,7 @@ const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg, 0, 0, 0, 0, 0};
 const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar, f2qqbar, 0, 0, 0, 0, 0};
 
 /** @brief gluon-quark channel */
-const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq, 0, fbarR2gq, 0, 0, 0};
+const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq, fbarF2gq, fbarR2gq, fbarFF2gq, fbarRF2gq, 0};
 
 /** @brief quark-quark channel */
 const CoeffMap qq = {0, 0, 0, 0, f2qq, fbarF2qq, 0, fbarFF2qqprime, 0, 0};
