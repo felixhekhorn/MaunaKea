@@ -8,12 +8,19 @@
 // some global constants
 #define pi M_PI
 #define CA 3.0
+#define CF 4.0 / 3.0
 #define TR 0.5
 
 namespace MaunaKea {
 
 /** @brief Fixed order coefficient functions */
 namespace FixedOrder {
+
+dbl beta0(cdbl nl) { return (11. / 3. * CA - 4. / 3. * TR * nl) / (4. * pi); }
+
+dbl beta1(cdbl nl) {
+  return (34.0 / 3.0 * CA * CA - 20. / 3. * CA * TR * nl - 4. * CF * TR * nl) / (4. * pi) / (4. * pi);
+}
 
 /** @name LO results */
 ///@{
@@ -125,8 +132,6 @@ dbl f1gq(cdbl rho, cdbl nl) {
 //==========================================================================
 //   Scale-dependent terms (as in: Nason, Dawson, Ellis '88) (recall to rescale!)
 //==========================================================================
-
-dbl beta0(cdbl nl) { return (11. / 3. * CA - 4. / 3. * TR * nl) / (4. * pi); }
 
 dbl fbarR1qqbar(cdbl rho, cdbl nl) {
   cdbl f = 2. * beta0(nl) * f0qqbar(rho, dblNaN);
@@ -293,6 +298,180 @@ dbl f2gg(cdbl rho, cdbl nl) {
   return f;
 }
 
+dbl f22nl1_FIT_gg(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+
+  cdbl f = -0.00356104167821861222 * b - 0.600682007963103239 * b2 + 13.82970988281562116 * b3 -
+           16.9635082827441165 * b4 + 3.76261923077192499 * b5 + 0.0116050479337840349 * b * lbe -
+           0.1575348075472875601 * b2 * lbe + 4.63151511439960648 * b3 * lbe + 7.74747644911347943 * b4 * lbe -
+           2.16931397003164326 * b5 * lbe - 0.01103205129641791145 * b2 * lbe2 + 1.039657934376285962 * b3 * lbe2 +
+           3.29932293902825979 * b * lrho - 10.34880689568112313 * b2 * lrho + 10.35776233604043958 * b3 * lrho -
+           3.30838403677087152 * b4 * lrho + 0.782326666976654504 * b * lrho2 - 1.65278029222162306 * b2 * lrho2 +
+           0.870448931607740223 * b3 * lrho2;
+  return f;
+}
+
+dbl f22nl0_FIT_gg(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+
+  cdbl f = -0.0578389 * b + 1.93094094141429693 * b2 - 122.9455571577786397 * b3 + 211.53435937689502 * b4 -
+           93.3402588876750071 * b5 - 0.704273292570916736 * b * lbe + 0.392152298237381979 * b2 * lbe -
+           37.6264268090281144 * b3 * lbe - 61.3793218095110394 * b4 * lbe + 44.7561338172871625 * b5 * lbe +
+           0.835563451232450513 * b * lbe2 + 0.0171747976559594831 * b2 * lbe2 - 5.34358073726912582 * b3 * lbe2 -
+           45.9071083443894262 * b * lrho + 156.2229978854608434 * b2 * lrho - 167.54059459682459 * b3 * lrho +
+           56.7473196239219973 * b4 * lrho - 18.1184678733560682 * b * lrho2 + 39.3190338078504655 * b2 * lrho2 -
+           21.2004447764154102 * b3 * lrho2;
+  return f;
+}
+
+dbl f21nl1_FIT_gg(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+
+  cdbl f = -0.00249982 - 0.0272733 * b + 19.4340755476554982 * b2 - 435.539809500685645 * b3 +
+           504.912020988537479 * b4 - 88.799664693707602 * b5 + 0.0432851214688035388 * b * lbe +
+           5.11647907859189718 * b2 * lbe - 146.1361340546396188 * b3 * lbe - 248.168773880287836 * b4 * lbe +
+           55.4431105669571417 * b5 * lbe - 0.0464201917351361396 * b * lbe2 + 0.35994235337967634 * b2 * lbe2 -
+           33.2094866285480819 * b3 * lbe2 - 100.5727014630313043 * b * lrho + 302.705056562542737 * b2 * lrho -
+           293.963282111113411 * b3 * lrho + 91.8347828939951401 * b4 * lrho - 20.4652573057790352 * b * lrho2 +
+           42.250982499345409 * b2 * lrho2 - 21.7855563762577368 * b3 * lrho2;
+  return f;
+}
+
+dbl f21nl0_FIT_gg(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl lrho2 = pow(lrho, 2);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl lbe3 = pow(lbe, 3);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+
+  cdbl f = 0.041247 + 0.0123377 * b - 661.55005204355904 * b2 + 13004.29562244225291 * b3 - 13876.36686145908297 * b4 +
+           1547.963484189548846 * b5 - 0.179987 * lbe + 0.0505162 * b * lbe - 177.28738825731523 * b2 * lbe +
+           4661.3434534046446 * b3 * lbe + 7636.87990302021721 * b4 * lbe - 1115.28388415014191 * b5 * lbe +
+           2.12283040860239304 * b * lbe2 - 12.67292918310723623 * b2 * lbe2 + 1107.754574260264376 * b3 * lbe2 -
+           3.34225380492980205 * b * lbe3 + 2369.63380918951308 * b * lrho - 7425.35627047328624 * b2 * lrho +
+           7426.27018972100489 * b3 * lrho - 2368.07297895804527 * b4 * lrho + 606.613428260526799 * b * lrho2 -
+           1272.126282331000418 * b2 * lrho2 + 665.508296075487579 * b3 * lrho2;
+  return f;
+}
+
+dbl f21nl2_FIT_gg(cdbl rho) {
+  cdbl b = sqrt(1 - rho);
+  cdbl lrho = log(rho);
+  cdbl lbe = log(b);
+  cdbl rho2 = pow(rho, 2);
+  cdbl b2 = pow(b, 2);
+  cdbl b3 = pow(b, 3);
+  cdbl b4 = pow(b, 4);
+  cdbl b5 = pow(b, 5);
+
+  cdbl f = 0.00005344 * b4 * lbe + 0.00010271 * b5 * lbe + 0.000206844 * b2 * rho - 0.00013099 * b3 * rho +
+           2.21e-6 * b5 * rho + 0.000207078 * lrho * rho2;
+  return f;
+}
+
+// double FixedOrder::PXS_NNLO_LO_NLOscales_gg(double rho)
+// {
+//   double nl=5.0;
+//   double nl2=pow(nl,2);
+//   double lgfr2=pow(lgfr,2);
+
+//   // the functions fij are normalized as: as^n/m^2
+//   double f10 = 4*pi*f1gg(rho);
+//   double f11 = 4*pi*f1ggbar(rho);
+//   double f00 = f0gg(rho);
+
+//   double f =
+//     f10*(-2.626056561016273*lgfr + 0.15915494309189535*lgfr*nl)
+// +f10*(-3)*b0*lgfr
+// +f10*(3)*b0*(LR-LF)
+//     + f11*(-2.626056561016273*lg*lgfr - 2.626056561016273*lgfr2
+//     + 0.15915494309189535*lg*lgfr*nl + 0.15915494309189535*lgfr2*nl)
+// +f11*(-3)*b0*(lg*lgfr + lgfr^2)
+// +f11*3*b0*(LRLF-LF^2)
+// 2.298724353885538 * (4.*np.pi)**2 = 363 = 3*121 = 3*11^2
+//     + f00*(-1.2918450914398067*lgfr + 2.298724353885538*lgfr2
+// +f00*[ (-2)*b1*lgfr + 3*b0^2*lgfr^2 ]
+// +f00*[2*b1(LR-LF) + 3*b0^2*(LF^2-2LFLR+LR^2) ]
+// 0.2786332550164289 * (4.*np.pi)**2 = 44 = 3*2*11*2/3
+//     + 0.16042520743370148*lgfr*nl - 0.2786332550164289*lgfr2*nl
+// 0.008443431970194815 * (4.*np.pi)**2 = 4/3 = 3* (2/3)**2
+//    + 0.008443431970194815*lgfr2*nl2);
+//   return f;
+// }
+//=========================================================================
+//   Scale dependent contributions for muF=/=muR originating at LO and NLO
+//=========================================================================
+
+dbl fbarRR2gg(cdbl rho, cdbl nl) {
+  cdbl f = 3. * pow(beta0(nl), 2) * f0gg(rho, dblNaN);
+  return f;
+}
+
+dbl fbarRF2gg(cdbl rho, cdbl nl) {
+  cdbl f = 3. * beta0(nl) * fbarF1gg(rho, nl);
+  return f - 2. * fbarRR2gg(rho, nl);
+}
+
+dbl fbarR2gg(cdbl rho, cdbl nl) {
+  cdbl f = 3. * beta0(nl) * f1gg(rho, nl) + 2. * beta1(nl) * f0gg(rho, dblNaN);
+  return f;
+}
+
+//==========================================================================
+// The scaling functions ~Log(muF^2/m^2) for gg-reaction.
+//
+// Some scaling functions from ``Hathor" (Aliev et al. arXiv:1007.1327v1)
+//==========================================================================
+
+dbl fbarF2gg(cdbl rho, cdbl nl) {
+  // double nl=5.0;
+  cdbl nl2 = pow(nl, 2);
+  cdbl f21nl0 = f21nl0_FIT_gg(rho) + 20 * f21nl2_FIT_gg(rho);
+  cdbl f21nl1 = f21nl1_FIT_gg(rho) - 9 * f21nl2_FIT_gg(rho);
+  cdbl f21nl2 = f21nl2_FIT_gg(rho);
+
+  cdbl f = (f21nl0 + nl * f21nl1 + nl2 * f21nl2);
+  return f - fbarR2gg(rho, nl);
+}
+
+dbl fbarFF2gg(cdbl rho, cdbl nl) {
+  // double nl=5.0;
+  cdbl f22nl0 = f22nl0_FIT_gg(rho);
+  cdbl f22nl1 = f22nl1_FIT_gg(rho);
+
+  cdbl f = f22nl0 + nl * f22nl1;
+  return f + fbarRR2gg(rho, nl) - 3. * beta0(nl) * fbarF1gg(rho, nl);
+}
+
 //================================================================================
 // The part of sigma(q qbar -> t tbar q qbar) not included in PXS_NNLO_FIT_qqbar.
 // It is a sum of a pure interference term and sigma(q qbar' -> t tbar q qbar').
@@ -341,18 +520,8 @@ dbl PXS_NNLO_THRESHOLD_qqbar(cdbl rho, cdbl nl) {
                      9.531529857990602 * lbe3 + 5.76404955831966 * lbe4;
   cdbl thresh20nl1 = 0.01168217939778234 / b + 0.35320738606771657 * lbe - (0.027777777777777776 * lbe) / b -
                      0.5752392118254954 * lbe2 + 0.2401687315966525 * lbe3;
-  // cdbl thresh21nl0 = 2.963036815826603 - 0.5208333333333334/b - 5.322595839415953*lbe
-  //   + (0.4444444444444444*lbe)/b + 11.307833327841358*lbe2 - 5.76404955831966*lbe3;
-  // cdbl thresh21nl1 = -0.40917468164069626 + 0.041666666666666664/b
-  //   + 0.46164291174543004*lbe - 0.5403796460924681*lbe2;
-  // cdbl thresh22nl0 = 1.7154768057697534 - 3.5187082038820767*lbe + 1.441012389579915*lbe2;
-  // cdbl thresh22nl1 = -0.26328935946926935 + 0.22515818587186173*lbe;
 
   cdbl f20 = thresh20nl0 + nl * thresh20nl1;
-  // cdbl f21 = thresh21nl0 + nl*thresh21nl1;
-  // cdbl f22 = thresh22nl0 + nl*thresh22nl1;
-
-  // cdbl f = f20 + f21*(lg + lgfr) + f22*(pow(lg,2) + 2.*lg*lgfr + pow(lgfr,2));
   return f0qqbar(rho, dblNaN) * f20;
 }
 
@@ -734,7 +903,7 @@ struct CoeffMap {
 };
 
 /** @brief gluon-gluon channel */
-const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg, 0, 0, 0, 0, 0};
+const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg, fbarF2gg, fbarR2gg, fbarFF2gg, fbarRF2gg, fbarRR2gg};
 
 /** @brief quark-antiquark channel */
 const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar, f2qqbar, 0, 0, 0, 0, 0};
