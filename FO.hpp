@@ -438,7 +438,7 @@ dbl fbarRR2gg(cdbl rho, cdbl nl) {
 
 dbl fbarRF2gg(cdbl rho, cdbl nl) {
   cdbl f = 3. * beta0(nl) * fbarF1gg(rho, nl);
-  return f - 2. * fbarRR2gg(rho, nl);
+  return f;
 }
 
 dbl fbarR2gg(cdbl rho, cdbl nl) {
@@ -469,7 +469,7 @@ dbl fbarFF2gg(cdbl rho, cdbl nl) {
   cdbl f22nl1 = f22nl1_FIT_gg(rho);
 
   cdbl f = f22nl0 + nl * f22nl1;
-  return f + fbarRR2gg(rho, nl) - 3. * beta0(nl) * fbarF1gg(rho, nl);
+  return f - fbarRR2gg(rho, nl) - fbarRF2gg(rho, nl);
 }
 
 //================================================================================
