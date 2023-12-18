@@ -61,7 +61,7 @@ class MaunaKea {
     integrate2D(&this->k, this->intCfg, &out);
     this->intOut = out;
     // post-process
-    this->k.optimizeGrid();
+    // this->k.optimizeGrid();
     this->k.addRawMetadata("IntegrationConfig", this->intCfg.toString());
     this->k.addLocalMetadata();
     this->k.addRawMetadata("IntegrationOutput", out.toString());
