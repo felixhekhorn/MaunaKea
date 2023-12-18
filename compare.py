@@ -109,12 +109,15 @@ def polyfit2d(x, y, z, kx=3, ky=3, order=None):
     return np.linalg.lstsq(a.T, np.ravel(z), rcond=None)
 
 
-print(diff)
 xifs = np.unique(np.array([el.xiF for el in els]))
 xirs = np.unique(np.array([el.xiR for el in els]))
 np.testing.assert_allclose(xifs, xirs)
 xis = 2.0 * np.log(xifs)
 lxis = len(xis)
+
+print("rel. diff top++ vs. MaunaKea")
+print(np.array(diff).reshape(lxis, lxis))
+
 coeff_tp, _r, _rank, _s = polyfit2d(
     xis, xis, np.array([(el.toppp) for el in els]).reshape(lxis, lxis), 2, 2, 2
 )

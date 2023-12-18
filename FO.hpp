@@ -398,35 +398,6 @@ dbl f21nl2_FIT_gg(cdbl rho) {
   return f;
 }
 
-// double FixedOrder::PXS_NNLO_LO_NLOscales_gg(double rho)
-// {
-//   double nl=5.0;
-//   double nl2=pow(nl,2);
-//   double lgfr2=pow(lgfr,2);
-
-//   // the functions fij are normalized as: as^n/m^2
-//   double f10 = 4*pi*f1gg(rho);
-//   double f11 = 4*pi*f1ggbar(rho);
-//   double f00 = f0gg(rho);
-
-//   double f =
-//     f10*(-2.626056561016273*lgfr + 0.15915494309189535*lgfr*nl)
-// +f10*(-3)*b0*lgfr
-// +f10*(3)*b0*(LR-LF)
-//     + f11*(-2.626056561016273*lg*lgfr - 2.626056561016273*lgfr2
-//     + 0.15915494309189535*lg*lgfr*nl + 0.15915494309189535*lgfr2*nl)
-// +f11*(-3)*b0*(lg*lgfr + lgfr^2)
-// +f11*3*b0*(LRLF-LF^2)
-// 2.298724353885538 * (4.*np.pi)**2 = 363 = 3*121 = 3*11^2
-//     + f00*(-1.2918450914398067*lgfr + 2.298724353885538*lgfr2
-// +f00*[ (-2)*b1*lgfr + 3*b0^2*lgfr^2 ]
-// +f00*[2*b1(LR-LF) + 3*b0^2*(LF^2-2LFLR+LR^2) ]
-// 0.2786332550164289 * (4.*np.pi)**2 = 44 = 3*2*11*2/3
-//     + 0.16042520743370148*lgfr*nl - 0.2786332550164289*lgfr2*nl
-// 0.008443431970194815 * (4.*np.pi)**2 = 4/3 = 3* (2/3)**2
-//    + 0.008443431970194815*lgfr2*nl2);
-//   return f;
-// }
 //=========================================================================
 //   Scale dependent contributions for muF=/=muR originating at LO and NLO
 //=========================================================================
@@ -525,6 +496,35 @@ dbl PXS_NNLO_THRESHOLD_qqbar(cdbl rho, cdbl nl) {
   return f0qqbar(rho, dblNaN) * f20;
 }
 
+dbl PXS_NNLO_THRESHOLD1_qqbar(cdbl rho, cdbl nl) {
+  // double nl = 5.0;// number of light flavors
+  cdbl b = sqrt(1 - rho);
+  cdbl lbe = log(b);
+  cdbl lbe2 = pow(lbe, 2);
+  cdbl lbe3 = pow(lbe, 3);
+
+  cdbl thresh21nl0 = 2.963036815826603 - 0.5208333333333334 / b - 5.322595839415953 * lbe +
+                     (0.4444444444444444 * lbe) / b + 11.307833327841358 * lbe2 - 5.76404955831966 * lbe3;
+  cdbl thresh21nl1 =
+      -0.40917468164069626 + 0.041666666666666664 / b + 0.46164291174543004 * lbe - 0.5403796460924681 * lbe2;
+
+  cdbl f21 = thresh21nl0 + nl * thresh21nl1;
+  return f0qqbar(rho, dblNaN) * f21;
+}
+
+dbl PXS_NNLO_THRESHOLD2_qqbar(cdbl rho, cdbl nl) {
+  // double nl = 5.0;// number of light flavors
+  cdbl b = sqrt(1 - rho);
+  cdbl lbe = log(b);
+  cdbl lbe2 = pow(lbe, 2);
+
+  cdbl thresh22nl0 = 1.7154768057697534 - 3.5187082038820767 * lbe + 1.441012389579915 * lbe2;
+  cdbl thresh22nl1 = -0.26328935946926935 + 0.22515818587186173 * lbe;
+
+  cdbl f22 = thresh22nl0 + nl * thresh22nl1;
+  return f0qqbar(rho, dblNaN) * f22;
+}
+
 //==========================================================================
 //   The fits for qqbar -> ttbar:
 //==========================================================================
@@ -616,16 +616,49 @@ dbl PXS_NNLO_FIT_qqbar(cdbl rho, cdbl nl) {
   // double nl=5.0;
   // the functions fij are normalized in as^n/m^2
   cdbl f20 = pow(nl, 2) * f20nl2_FIT_qqbar(rho) + nl * f20nl1_FIT_qqbar(rho) + f20nl0_FIT_qqbar(rho);
-  // double f21 = pow(nl,2)*f21nl2_FIT_qqbar(rho) + nl*f21nl1_FIT_qqbar(rho) + f21nl0_FIT_qqbar(rho);
-  // double f22 = pow(nl,2)*f22nl2_FIT_qqbar(rho) + nl*f22nl1_FIT_qqbar(rho) + f22nl0_FIT_qqbar(rho);
-
-  // double f = f20 + f21*(lg + lgfr) + f22*(pow(lg,2) + 2.*lg*lgfr + pow(lgfr,2));
   return f20;
 }
 
 dbl f2qqbar(cdbl rho, cdbl nl) {
   cdbl f = PXS_NNLO_THRESHOLD_qqbar(rho, nl) + PXS_NNLO_FIT_qqbar(rho, nl) + PXS_NNLO_identical_qqbar(rho);
   return f;
+}
+
+//=========================================================================
+//   Scale dependent contributions for muF=/=muR originating at LO and NLO
+//=========================================================================
+
+dbl fbarRR2qqbar(cdbl rho, cdbl nl) {
+  cdbl f = 3. * pow(beta0(nl), 2) * f0qqbar(rho, dblNaN);
+  return f;
+}
+
+dbl fbarRF2qqbar(cdbl rho, cdbl nl) {
+  cdbl f = 3. * beta0(nl) * fbarF1qqbar(rho, nl);
+  return f;
+}
+
+dbl fbarR2qqbar(cdbl rho, cdbl nl) {
+  cdbl f = 3. * beta0(nl) * f1qqbar(rho, nl) + 2. * beta1(nl) * f0qqbar(rho, dblNaN);
+  return f;
+}
+
+//==========================================================================
+//   The fits for qqbar -> ttbar:
+//==========================================================================
+
+dbl fbarF2qqbar(cdbl rho, cdbl nl) {
+  // double nl=5.0;
+  cdbl f21_FIT = pow(nl, 2) * f21nl2_FIT_qqbar(rho) + nl * f21nl1_FIT_qqbar(rho) + f21nl0_FIT_qqbar(rho);
+  cdbl f21_THRESHOLD = PXS_NNLO_THRESHOLD1_qqbar(rho, nl);
+  return f21_FIT + f21_THRESHOLD - fbarR2qqbar(rho, nl);
+}
+
+dbl fbarFF2qqbar(cdbl rho, cdbl nl) {
+  // double nl=5.0;
+  cdbl f22_FIT = pow(nl, 2) * f22nl2_FIT_qqbar(rho) + nl * f22nl1_FIT_qqbar(rho) + f22nl0_FIT_qqbar(rho);
+  cdbl f22_THRESHOLD = PXS_NNLO_THRESHOLD2_qqbar(rho, nl);
+  return f22_FIT + f22_THRESHOLD - fbarRR2qqbar(rho, nl) - fbarRF2qqbar(rho, nl);
 }
 
 //=======================================================================
@@ -906,7 +939,8 @@ struct CoeffMap {
 const CoeffMap gg = {f0gg, f1gg, fbarF1gg, fbarR1gg, f2gg, fbarF2gg, fbarR2gg, fbarFF2gg, fbarRF2gg, fbarRR2gg};
 
 /** @brief quark-antiquark channel */
-const CoeffMap qqbar = {f0qqbar, f1qqbar, fbarF1qqbar, fbarR1qqbar, f2qqbar, 0, 0, 0, 0, 0};
+const CoeffMap qqbar = {f0qqbar,     f1qqbar,     fbarF1qqbar,  fbarR1qqbar,  f2qqbar,
+                        fbarF2qqbar, fbarR2qqbar, fbarFF2qqbar, fbarRF2qqbar, fbarRR2qqbar};
 
 /** @brief gluon-quark channel */
 const CoeffMap gq = {0, f1gq, fbarF1gq, 0, f2gq, fbarF2gq, fbarR2gq, fbarFF2gq, fbarRF2gq, 0};
