@@ -399,26 +399,31 @@ class Kernel : public HepSource::Integrand {
    * @param key key
    * @param value value
    */
-  void addRawMetadata(str key, str value) const { this->grid->set_key_value(key, value); }
+  void addRawMetadata(str key, str value) const {
+#define kKernelKeyStrSize 100
+    char buffer[kKernelKeyStrSize];
+    snprintf(buffer, kKernelKeyStrSize, "MaunaKea/%s", key.c_str());
+    this->grid->set_key_value(buffer, value);
+  }
 
   /**
    * @brief add local metadata to grid
    */
   void addLocalMetadata() const {
-#define kKernelStrSize 100
-    char buffer[kKernelStrSize];
-    snprintf(buffer, kKernelStrSize, "%e", this->m2);
-    this->addRawMetadata("ManuaKea:m2", buffer);
-    snprintf(buffer, kKernelStrSize, "%u", this->nl);
-    this->addRawMetadata("ManuaKea:nl", buffer);
-    snprintf(buffer, kKernelStrSize, "%u", this->order_mask);
-    this->addRawMetadata("ManuaKea:order_mask", buffer);
-    snprintf(buffer, kKernelStrSize, "%u", this->lumi_mask);
-    this->addRawMetadata("ManuaKea:lumi_mask", buffer);
-    snprintf(buffer, kKernelStrSize, "%e", this->S_h);
-    this->addRawMetadata("ManuaKea:hadronicS", buffer);
-    snprintf(buffer, kKernelStrSize, "%s#%d", this->pdf->set().name().c_str(), this->pdf->memberID());
-    this->addRawMetadata("ManuaKea:PDF", buffer);
+#define kKernelValStrSize 100
+    char buffer[kKernelValStrSize];
+    snprintf(buffer, kKernelValStrSize, "%e", this->m2);
+    this->addRawMetadata("m2", buffer);
+    snprintf(buffer, kKernelValStrSize, "%u", this->nl);
+    this->addRawMetadata("nl", buffer);
+    snprintf(buffer, kKernelValStrSize, "%u", this->order_mask);
+    this->addRawMetadata("order_mask", buffer);
+    snprintf(buffer, kKernelValStrSize, "%u", this->lumi_mask);
+    this->addRawMetadata("lumi_mask", buffer);
+    snprintf(buffer, kKernelValStrSize, "%e", this->S_h);
+    this->addRawMetadata("hadronicS", buffer);
+    snprintf(buffer, kKernelValStrSize, "%s#%d", this->pdf->set().name().c_str(), this->pdf->memberID());
+    this->addRawMetadata("PDF", buffer);
   }
 
   /**
@@ -427,10 +432,10 @@ class Kernel : public HepSource::Integrand {
    */
   void writeGrid(const str fp) const { this->grid->write(fp); }
 
-  /** @see HepSource::Integrand::Dvegas_init */
+  /** @see MC initializer */
   void Dvegas_init() const { this->grid->scale(0.); }
 
-  /** @see HepSource::Integrand::Dvegas_final */
+  /** @see MC finalizer */
   void Dvegas_final(cuint iterations) const { this->grid->scale(1. / iterations); }
 };
 }  // namespace MaunaKea

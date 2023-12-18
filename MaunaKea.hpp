@@ -55,9 +55,9 @@ class MaunaKea {
     this->intOut = out;
     // post-process
     this->k.optimizeGrid();
-    this->k.addRawMetadata("MaunaKea:IntegrationConfig", this->intCfg.toString());
+    this->k.addRawMetadata("IntegrationConfig", this->intCfg.toString());
     this->k.addLocalMetadata();
-    this->k.addRawMetadata("MaunaKea:IntegrationOutput", out.toString());
+    this->k.addRawMetadata("IntegrationOutput", out.toString());
   }
 
   /**

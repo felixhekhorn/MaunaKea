@@ -30,7 +30,7 @@ struct IntegrationConfig {
    * @return string representation
    */
   str toString() const {
-#define kIntegrationConfigStrSize = 200
+#define kIntegrationConfigStrSize 200
     char buffer[kIntegrationConfigStrSize];
     snprintf(buffer, kIntegrationConfigStrSize,
              "verbosity: %d\ncalls: %lu\nwarmupCalls: %lu\niterations: %u\nwarmupIterations: %u\nadaptChi2:%u\nbins:%u",
