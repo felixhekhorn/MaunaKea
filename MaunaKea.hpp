@@ -37,6 +37,13 @@ class MaunaKea {
   void setHadronicS(cdbl Sh) { this->k.setHadronicS(Sh); }
 
   /**
+   * @brief Set renormalization and factorization scale ratio \f$\xi = \mu/m\f$
+   * @param xiR renormalization scale ratio \f$\xi_R = \mu_R/m\f$
+   * @param xiF factorization scale ratio \f$\xi_R = \mu_F/m\f$
+   */
+  void setScaleRatios(cdbl xiR, cdbl xiF) { this->k.setScaleRatios(xiR, xiF); }
+
+  /**
    * @brief Set reference PDF
    * @param setname PDF set name
    * @param member PDF member

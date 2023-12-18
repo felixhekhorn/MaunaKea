@@ -30,10 +30,18 @@ class Kernel : public HepSource::Integrand {
   std::unique_ptr<PineAPPL::Grid> grid;
   /** @brief reference PDF */
   std::unique_ptr<LHAPDF::PDF> pdf;
-  /** @brief factorization scale */
-  dbl muF2;
+  /** @brief renormalization scale ratio \f$\xi_R = \mu_R/m\f$ */
+  dbl xiR;
+  /** @brief renormalization scale log \f$L_R = 2*\log(\xi_R)\f$ */
+  dbl logR;
   /** @brief strong coupling constant */
   dbl as;
+  /** @brief factorization scale ratio \f$\xi_F = \mu_F/m\f$ */
+  dbl xiF;
+  /** @brief factorization scale log \f$L_F = 2*\log(\xi_F)\f$ */
+  dbl logF;
+  /** @brief factorization scale */
+  dbl muF2;
 
   /** @brief Integration variables */
   struct IntVars {
@@ -179,36 +187,42 @@ class Kernel : public HepSource::Integrand {
   dbl fillLumi(cdbl flux, cuint idx_lumi, const FixedOrder::CoeffMap m) const {
     dbl tot = 0.;
     // fill any order
-#define fillOrder(label, k, idx, flag)                                                         \
-  if (m.f##label##k) {                                                                         \
-    cdbl weight = this->v.common_weight * m.f##label##k(this->v.rho, this->nl);                \
-    this->grid->fill(this->v.x1, this->v.x2, this->muF2, this->IDX_ORDER_##idx, 0.5, idx_lumi, \
-                     weight* this->v.vegas_weight* this->v.x1* this->v.x2);                    \
-    tot += weight * flux * pow(this->as, 2 + k) * flag;                                        \
+#define fillOrder(label, k, idx, powR, powF)                                                     \
+  if (m.f##label##k) {                                                                           \
+    cdbl weight = this->v.common_weight * m.f##label##k(this->v.rho, this->nl);                  \
+    this->grid->fill(this->v.x1, this->v.x2, this->m2, this->IDX_ORDER_##idx, 0.5, idx_lumi,     \
+                     weight* this->v.vegas_weight* this->v.x1* this->v.x2);                      \
+    tot += weight * flux * pow(this->as, 2 + k) * pow(this->logR, powR) * pow(this->logF, powF); \
   }
     // LO
     if ((this->order_mask & ORDER_LO) == ORDER_LO) {
-      fillOrder(, 0, LO, 1.);
+      fillOrder(, 0, LO, 0, 0);
     }
     // NLO
     if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-      fillOrder(, 1, NLO, 1.);
+      fillOrder(, 1, NLO, 0, 0);
       // SV
-      fillOrder(barR, 1, NLO_R, 0.);
-      fillOrder(barF, 1, NLO_F, 0.);
+      fillOrder(barR, 1, NLO_R, 1, 0);
+      fillOrder(barF, 1, NLO_F, 0, 1);
     }
     // NNLO
     if ((this->order_mask & ORDER_NNLO) == ORDER_NNLO) {
-      fillOrder(, 2, NNLO, 1.);
+      fillOrder(, 2, NNLO, 0, 0);
       // SV^1
-      fillOrder(barR, 2, NNLO_R, 0.);
-      fillOrder(barF, 2, NNLO_F, 0.);
+      fillOrder(barR, 2, NNLO_R, 1, 0);
+      fillOrder(barF, 2, NNLO_F, 0, 1);
       // SV^2
-      fillOrder(barRR, 2, NNLO_RR, 0.);
-      fillOrder(barRF, 2, NNLO_RF, 0.);
-      fillOrder(barFF, 2, NNLO_FF, 0.);
+      fillOrder(barRR, 2, NNLO_RR, 2, 0);
+      fillOrder(barRF, 2, NNLO_RF, 1, 1);
+      fillOrder(barFF, 2, NNLO_FF, 0, 2);
     }
     return tot;
+  }
+
+  /** @brief Cache alpha_s at the renormalization scale */
+  void setAlphaS() {
+    cdbl muR2 = this->xiR * this->xiR * this->m2;
+    this->as = this->pdf->alphasQ2(muR2);
   }
 
  public:
@@ -253,7 +267,7 @@ class Kernel : public HepSource::Integrand {
       : m2(m2), nl(nl), order_mask(order_mask), lumi_mask(lumi_mask) {
     // 1/m2 to get the dimension correct and convert to pb
     this->v.norm = 0.38937966e9 / this->m2;
-    this->muF2 = this->m2;
+    this->setScaleRatios();
   }
 
   /**
@@ -269,13 +283,28 @@ class Kernel : public HepSource::Integrand {
   }
 
   /**
-   * @brief Set reference PDF
+   * @brief Set renormalization and factorization scale ratio \f$\xi = \mu/m\f$
+   * @param xiR renormalization scale ratio \f$\xi_R = \mu_R/m\f$
+   * @param xiF factorization scale ratio \f$\xi_R = \mu_F/m\f$
+   */
+  void setScaleRatios(cdbl xiR = 1., cdbl xiF = 1.) {
+    this->xiR = xiR;
+    this->logR = 2. * log(xiR);
+    // recalculate as
+    if (this->hasPDF()) this->setAlphaS();
+    this->xiF = xiF;
+    this->muF2 = xiF * xiF * this->m2;
+    this->logF = 2. * log(xiF);
+  }
+
+  /**
+   * @brief Set reference PDF (and alpha_s)
    * @param setname PDF set name
    * @param member PDF member
    */
   void setPDF(const str setname, cuint member) {
     this->pdf.reset(LHAPDF::mkPDF(setname, member));
-    this->as = this->pdf->alphasQ2(this->m2);
+    this->setAlphaS();
   }
 
   /**
@@ -422,6 +451,10 @@ class Kernel : public HepSource::Integrand {
     this->addRawMetadata("lumi_mask", buffer);
     snprintf(buffer, kKernelValStrSize, "%e", this->S_h);
     this->addRawMetadata("hadronicS", buffer);
+    snprintf(buffer, kKernelValStrSize, "%e", this->xiR);
+    this->addRawMetadata("xiR", buffer);
+    snprintf(buffer, kKernelValStrSize, "%e", this->xiF);
+    this->addRawMetadata("xiF", buffer);
     snprintf(buffer, kKernelValStrSize, "%s#%d", this->pdf->set().name().c_str(), this->pdf->memberID());
     this->addRawMetadata("PDF", buffer);
   }
