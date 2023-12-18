@@ -20,6 +20,8 @@ class Kernel : public HepSource::Integrand {
   uint order_mask;
   /** @brief active luminosities by bit */
   uint lumi_mask;
+  /** @brief hadronic c.o.m. energy  \f$S_h\f$ */
+  dbl S_h;
   /** @brief hadronic energy parameter \f$\rho_h = 4m^2/S_h\f$ */
   dbl rho_h;
   /** @brief hadronic energy parameter \f$\beta_h = \sqrt{1-\rho_h}\f$ */
@@ -259,6 +261,7 @@ class Kernel : public HepSource::Integrand {
    * @param Sh hadronic Mandelstam S
    */
   void setHadronicS(cdbl Sh) {
+    this->S_h = Sh;
     this->rho_h = 4. * this->m2 / Sh;
     this->beta_h = sqrt(1. - this->rho_h);
     this->v.beta_max = this->beta_h;
@@ -391,7 +394,37 @@ class Kernel : public HepSource::Integrand {
   /** @brief Optimize grid */
   void optimizeGrid() const { this->grid->optimize(); }
 
-  /** @brief Write grid to disk */
+  /**
+   * @brief add raw metadata to grid
+   * @param key key
+   * @param value value
+   */
+  void addRawMetadata(str key, str value) const { this->grid->set_key_value(key, value); }
+
+  /**
+   * @brief add local metadata to grid
+   */
+  void addLocalMetadata() const {
+#define kKernelStrSize 100
+    char buffer[kKernelStrSize];
+    snprintf(buffer, kKernelStrSize, "%e", this->m2);
+    this->addRawMetadata("ManuaKea:m2", buffer);
+    snprintf(buffer, kKernelStrSize, "%u", this->nl);
+    this->addRawMetadata("ManuaKea:nl", buffer);
+    snprintf(buffer, kKernelStrSize, "%u", this->order_mask);
+    this->addRawMetadata("ManuaKea:order_mask", buffer);
+    snprintf(buffer, kKernelStrSize, "%u", this->lumi_mask);
+    this->addRawMetadata("ManuaKea:lumi_mask", buffer);
+    snprintf(buffer, kKernelStrSize, "%e", this->S_h);
+    this->addRawMetadata("ManuaKea:hadronicS", buffer);
+    snprintf(buffer, kKernelStrSize, "%s#%d", this->pdf->set().name().c_str(), this->pdf->memberID());
+    this->addRawMetadata("ManuaKea:PDF", buffer);
+  }
+
+  /**
+   * @brief Write grid to disk
+   * @param fp file path
+   */
   void writeGrid(const str fp) const { this->grid->write(fp); }
 
   /** @see HepSource::Integrand::Dvegas_init */

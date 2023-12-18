@@ -26,7 +26,7 @@ class MaunaKea {
    * @param lumi_mask active luminosities
    */
   MaunaKea(cdbl m2, cuint nl, cuint order_mask, cuint lumi_mask) : k(m2, nl, order_mask, lumi_mask) {
-    this->intCfg.MC_warmupCalls = 1000;
+    this->intCfg.warmupCalls = 1000;
     this->intCfg.calls = 20000;
   }
 
@@ -55,7 +55,9 @@ class MaunaKea {
     this->intOut = out;
     // post-process
     this->k.optimizeGrid();
-    // grid.set_key_value("events", "10000000");
+    this->k.addRawMetadata("MaunaKea:IntegrationConfig", this->intCfg.toString());
+    this->k.addLocalMetadata();
+    this->k.addRawMetadata("MaunaKea:IntegrationOutput", out.toString());
   }
 
   /**

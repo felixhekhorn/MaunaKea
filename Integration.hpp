@@ -10,65 +10,68 @@ namespace MaunaKea {
 
 /** @brief Integration parameter configuration */
 struct IntegrationConfig {
-  /** @name common variables */
-  ///@{
-
   /** @brief level of output */
   int verbosity = 0;
-
   /** @brief calls */
   size_t calls = 0;
-  ///@}
-
-  /** @name Monte Carlo variables */
-  ///@{
   /** @brief calls for warmup */
-  size_t MC_warmupCalls = 0;
-
+  size_t warmupCalls = 0;
   /** @brief iterations */
-  uint MC_iterations = 5;
-
+  uint iterations = 5;
   /** @brief iterations during warmup */
-  uint MC_warmupIterations = 5;
-
+  uint warmupIterations = 5;
   /** @brief iterate until |chi2-1| < 0.5? */
-  bool MC_adaptChi2 = true;
-  ///@}
-
-  /** @name variables for Dvegas */
-  ///@{
+  bool adaptChi2 = true;
   /** @brief number of bins */
-  uint Dvegas_bins = 250;
-  ///@}
+  uint bins = 250;
+
+  /**
+   * @brief Dump current state to string
+   * @return string representation
+   */
+  str toString() const {
+#define kIntegrationConfigStrSize = 200
+    char buffer[kIntegrationConfigStrSize];
+    snprintf(buffer, kIntegrationConfigStrSize,
+             "verbosity: %d\ncalls: %lu\nwarmupCalls: %lu\niterations: %u\nwarmupIterations: %u\nadaptChi2:%u\nbins:%u",
+             this->verbosity, this->calls, this->warmupCalls, this->iterations, this->warmupIterations, this->adaptChi2,
+             this->bins);
+    return str(buffer);
+  }
 };
 
 /** @brief Integration result */
 struct IntegrationOutput {
-  /** @name common variables */
-  ///@{
   /** @brief result */
   dbl result = 0;
   /** @brief (absolute) error */
   dbl error = 0;
-  ///@}
-
-  /** @name Monte Carlo variables */
-  ///@{
   /** @brief chi^2 */
-  dbl MC_chi2 = 0;
+  dbl chi2 = 0;
   /** @brief number of iteration to converge chi^2 */
-  uint MC_chi2inter = 0;
-  ///@}
+  uint chi2iter = 0;
 
   /**
    * @brief constructor
    * @param result result
    * @param error (absolute) error
-   * @param MC_chi2 chi^2
-   * @param MC_chi2inter number of iteration to converge chi^2
+   * @param chi2 chi^2
+   * @param chi2iter number of iteration to converge chi^2
    */
-  explicit IntegrationOutput(cdbl result = 0, cdbl error = 0, cdbl MC_chi2 = 0, cuint MC_chi2inter = 0)
-      : result(result), error(error), MC_chi2(MC_chi2), MC_chi2inter(MC_chi2inter) {}
+  explicit IntegrationOutput(cdbl result = 0, cdbl error = 0, cdbl chi2 = 0, cuint chi2iter = 0)
+      : result(result), error(error), chi2(chi2), chi2iter(chi2iter) {}
+
+  /**
+   * @brief Dump current state to string
+   * @return string representation
+   */
+  str toString() const {
+#define kIntegrationOutputStrSize 200
+    char buffer[kIntegrationOutputStrSize];
+    snprintf(buffer, kIntegrationOutputStrSize, "result: %e\nerror: %e\nchi2: %e\nchi2iter: %u", this->result,
+             this->error, this->chi2, this->chi2iter);
+    return str(buffer);
+  }
 };
 
 /**
@@ -81,19 +84,19 @@ struct IntegrationOutput {
 template <class IntKerT>
 dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out) {
   cuint dim = 2;
-  HepSource::Dvegas dv(dim, cfg.Dvegas_bins, 1, *K);
+  HepSource::Dvegas dv(dim, cfg.bins, 1, *K);
   double res, err;
   // clear histograms
   K->Dvegas_init();
   // warm-up
   // catch zero kernel
   try {
-    HepSource::VEGAS(dv, cfg.MC_warmupCalls, cfg.MC_warmupIterations, 0, cfg.verbosity - 3);
+    HepSource::VEGAS(dv, cfg.warmupCalls, cfg.warmupIterations, 0, cfg.verbosity - 3);
   } catch (std::domain_error& e) {
     out->result = 0;
     out->error = 0;
-    out->MC_chi2 = 0;
-    out->MC_chi2inter = 0;
+    out->chi2 = 0;
+    out->chi2iter = 0;
     return 0.;
   }
   HepSource::IntegrandEstimate e = dv.stats(0);
@@ -101,14 +104,14 @@ dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out
   uint guard = 0;
   out->result = dblNaN;
   out->error = dblNaN;
-  out->MC_chi2 = dblNaN;
-  out->MC_chi2inter = 0;
+  out->chi2 = dblNaN;
+  out->chi2iter = 0;
   // run
-  if (cfg.MC_adaptChi2) {  // adapt chi
+  if (cfg.adaptChi2) {  // adapt chi
     do {
       if (!std::isfinite(res)) return res;
       K->Dvegas_init();
-      HepSource::VEGAS(dv, cfg.calls, cfg.MC_iterations, 1, cfg.verbosity - 2);
+      HepSource::VEGAS(dv, cfg.calls, cfg.iterations, 1, cfg.verbosity - 2);
       e = dv.stats(0);
       res = e.integral();
       err = e.standardDeviation();
@@ -118,20 +121,20 @@ dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out
     } while (fabs(e.chiSquarePerIteration() - 1.0) > 0.5 && ++guard < 15);
   } else {  // simple run
     K->Dvegas_init();
-    HepSource::VEGAS(dv, cfg.calls, cfg.MC_iterations, 1, cfg.verbosity - 2);
+    HepSource::VEGAS(dv, cfg.calls, cfg.iterations, 1, cfg.verbosity - 2);
     e = dv.stats(0);
     res = e.integral();
     err = e.standardDeviation();
   }
   // finish
-  K->Dvegas_final(cfg.MC_iterations);
+  K->Dvegas_final(cfg.iterations);
   if (1 == cfg.verbosity)
     printf("[INFO] int%dD(Dvegas): [%d] % e ± %.3e (%.3f%%) chi2/it: %.3f\n", dim, guard, res, err,
            fabs(err / res * 1e2), e.chiSquarePerIteration());
   out->result = res;
   out->error = err;
-  out->MC_chi2 = e.chiSquarePerIteration();
-  out->MC_chi2inter = guard;
+  out->chi2 = e.chiSquarePerIteration();
+  out->chi2iter = guard;
   return res;
 }
 }  // namespace MaunaKea
