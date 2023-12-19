@@ -23,10 +23,10 @@ int dEnterria_charm() {
   cdbl m2 = pow(1.67, 2);
   cdbl S_h = pow(14e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO, MaunaKea::Kernel::LUMI_GG);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
   mk.intCfg.calls = 50000;
   mk.setHadronicS(S_h);
-  mk.setPDF("NNPDF40_nnlo_as_01180", 0);
+  mk.setPDF("ABMP16_3_nnlo", 0);
   mk.setScaleRatios(2., 2.);
   // fill the grid
   mk.run();
@@ -42,10 +42,10 @@ int dEnterria_bottom() {
   cdbl m2 = pow(4.66, 2);
   cdbl S_h = pow(14e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO, MaunaKea::Kernel::LUMI_GG);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
   mk.intCfg.calls = 50000;
   mk.setHadronicS(S_h);
-  mk.setPDF("NNPDF40_nnlo_as_01180", 0);
+  mk.setPDF("ABMP16_4_nnlo", 0);
   mk.setScaleRatios(2., 2.);
   // fill the grid
   mk.run();
@@ -58,6 +58,6 @@ int dEnterria_bottom() {
 
 int main() {
   // return toppp();
-  return dEnterria_charm();
-  // return dEnterria_bottom();
+  // return dEnterria_charm();
+  return dEnterria_bottom();
 }
