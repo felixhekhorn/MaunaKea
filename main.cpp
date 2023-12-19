@@ -18,10 +18,11 @@ int toppp() {
   return EXIT_SUCCESS;
 }
 
-int dEnterria_charm() {
+int dEnterria_table1_charm() {
   cuint nl = 3;
   cdbl m2 = pow(1.67, 2);
-  cdbl S_h = pow(14e3, 2);
+  // cdbl S_h = pow(14e3, 2);
+  cdbl S_h = pow(100e3, 2);
   // init object
   MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
   mk.intCfg.calls = 50000;
@@ -37,10 +38,11 @@ int dEnterria_charm() {
   return EXIT_SUCCESS;
 }
 
-int dEnterria_bottom() {
+int dEnterria_table1_bottom() {
   cuint nl = 4;
   cdbl m2 = pow(4.66, 2);
-  cdbl S_h = pow(14e3, 2);
+  // cdbl S_h = pow(14e3, 2);
+  cdbl S_h = pow(100e3, 2);
   // init object
   MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
   mk.intCfg.calls = 50000;
@@ -58,6 +60,6 @@ int dEnterria_bottom() {
 
 int main() {
   // return toppp();
-  // return dEnterria_charm();
-  return dEnterria_bottom();
+  return dEnterria_table1_charm();
+  // return dEnterria_table1_bottom();
 }
