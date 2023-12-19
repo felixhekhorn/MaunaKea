@@ -53,6 +53,7 @@ class MaunaKea {
   /** @brief Run calculation */
   void run() {
     // Checks
+    if (!this->k.isPhysical()) throw std::domain_error("No physical domain (too little energy)!");
     if (!this->k.hasPDF()) throw std::domain_error("No PDF was set so far!");
     // Init
     this->k.initGrid();
@@ -61,7 +62,7 @@ class MaunaKea {
     integrate2D(&this->k, this->intCfg, &out);
     this->intOut = out;
     // post-process
-    // this->k.optimizeGrid();
+    this->k.optimizeGrid();
     this->k.addRawMetadata("IntegrationConfig", this->intCfg.toString());
     this->k.addLocalMetadata();
     this->k.addRawMetadata("IntegrationOutput", out.toString());

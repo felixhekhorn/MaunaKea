@@ -314,6 +314,12 @@ class Kernel : public HepSource::Integrand {
   bool hasPDF() const { return static_cast<bool>(this->pdf); }
 
   /**
+   * @brief has physical parameters?
+   * @return has enough energy to do something?
+   */
+  bool isPhysical() const { return this->S_h > 4. * this->m2; }
+
+  /**
    * @brief Kernel function in Dvegas
    * @param x adapted continuous integration variables
    * @param k discrete integration variables
@@ -416,7 +422,10 @@ class Kernel : public HepSource::Integrand {
 
     // create the PineAPPL grid
     PineAPPL::KeyVal kv;
-    kv.set_double("x_min", rho_h);
+    kv.set_double("x_min", this->rho_h);
+    kv.set_double("q2_min", this->m2 * 0.99);
+    kv.set_double("q2_max", this->m2 * 1.01);
+    kv.set_double("q2_bins", 1);
     this->grid.reset(new PineAPPL::Grid(lumi, orders, bins, kv));
   }
 
