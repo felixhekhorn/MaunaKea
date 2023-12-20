@@ -5,10 +5,12 @@ int toppp() {
   cdbl m2 = pow(172.5, 2);
   cdbl S_h = pow(8e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO, MaunaKea::Kernel::LUMI_GG);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_NNLO, MaunaKea::Kernel::LUMI_GG);
   mk.intCfg.calls = 50000;
+  mk.intCfg.verbosity = 3;
   mk.setHadronicS(S_h);
   mk.setPDF("NNPDF40_nnlo_as_01180", 0);
+  // mk.setGridCentralScaleRatio(2.);
   // fill the grid
   mk.run();
   const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
@@ -117,9 +119,9 @@ int dEnterria_fig1_bottom() {
 }
 
 int main() {
-  // return toppp();
+  return toppp();
   // return dEnterria_table1_charm();
   // return dEnterria_fig1_charm();
   // return dEnterria_table1_bottom();
-  return dEnterria_fig1_bottom();
+  // return dEnterria_fig1_bottom();
 }

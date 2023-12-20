@@ -37,11 +37,17 @@ class MaunaKea {
   void setHadronicS(cdbl Sh) { this->k.setHadronicS(Sh); }
 
   /**
-   * @brief Set renormalization and factorization scale ratio \f$\xi = \mu/m\f$
-   * @param xiR renormalization scale ratio \f$\xi_R = \mu_R/m\f$
-   * @param xiF factorization scale ratio \f$\xi_R = \mu_F/m\f$
+   * @brief Set renormalization and factorization scale ratios \f$\xi_{R/F} = \mu_{R/F}/m\f$
+   * @param xiR (linear) renormalization scale ratio \f$\xi_R = \mu_R/m\f$
+   * @param xiF (linear) factorization scale ratio \f$\xi_F = \mu_F/m\f$
    */
   void setScaleRatios(cdbl xiR, cdbl xiF) { this->k.setScaleRatios(xiR, xiF); }
+
+  /**
+   * @brief Set grid central scale ratio \f$\xi = \mu/m\f$
+   * @param xi (linear) central scale ratio \f$\xi = \mu/m\f$
+   */
+  void setGridCentralScaleRatio(cdbl xi) { this->k.setGridCentralScaleRatio(xi); }
 
   /**
    * @brief Set reference PDF
@@ -63,9 +69,9 @@ class MaunaKea {
     this->intOut = out;
     // post-process
     this->k.optimizeGrid();
-    this->k.addRawMetadata("IntegrationConfig", this->intCfg.toString());
+    this->k.addScopedMetadata("IntegrationConfig", this->intCfg.toString());
     this->k.addLocalMetadata();
-    this->k.addRawMetadata("IntegrationOutput", out.toString());
+    this->k.addScopedMetadata("IntegrationOutput", out.toString());
   }
 
   /**

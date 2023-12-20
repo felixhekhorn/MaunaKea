@@ -30,16 +30,22 @@ class Kernel : public HepSource::Integrand {
   std::unique_ptr<PineAPPL::Grid> grid;
   /** @brief reference PDF */
   std::unique_ptr<LHAPDF::PDF> pdf;
+  /** @brief grid central scale ratio \f$\xi = \mu/m\f$ */
+  dbl xi = 1.;
+  /** @brief grid central scale log \f$L_C=2*\log(\xi)\f$ */
+  dbl logC = 0.;
+  /** @brief grid central scale */
+  dbl mu2;
   /** @brief renormalization scale ratio \f$\xi_R = \mu_R/m\f$ */
-  dbl xiR;
+  dbl xiR = 1.;
   /** @brief renormalization scale log \f$L_R = 2*\log(\xi_R)\f$ */
-  dbl logR;
+  dbl logR = 0.;
   /** @brief strong coupling constant */
   dbl as;
   /** @brief factorization scale ratio \f$\xi_F = \mu_F/m\f$ */
-  dbl xiF;
+  dbl xiF = 1.;
   /** @brief factorization scale log \f$L_F = 2*\log(\xi_F)\f$ */
-  dbl logF;
+  dbl logF = 0.;
   /** @brief factorization scale */
   dbl muF2;
 
@@ -179,49 +185,101 @@ class Kernel : public HepSource::Integrand {
   }
 
   /**
+   * @brief Compute grid contribution and integral contribution
+   * @param flux flux
+   * @param k PTO
+   * @param idx_order grid order index
+   * @param powR renormalization log power
+   * @param powF factorization log power
+   * @param idx_lumi grid luminosity index
+   * @param weight coefficient function
+   * @return contribution to integral
+   */
+  dbl fill(cdbl flux, cuint k, cuint idx_order, cuint powR, cuint powF, cuint idx_lumi, cdbl weight) const {
+    cdbl grid_weight = weight * this->v.vegas_weight * this->v.x1 * this->v.x2;
+    this->grid->fill(this->v.x1, this->v.x2, this->mu2, idx_order, 0.5, idx_lumi, grid_weight);
+    if (!std::isfinite(weight)) printf("%e %e %e %e\n", weight, this->v.x1, this->v.x2, this->v.rho);
+    return weight * flux * pow(this->as, 2 + k) * pow(this->logR, powR) * pow(this->logF, powF);
+  }
+
+  /**
    * @brief Insert a given luminosity into the grid
    * @param flux flux
    * @param idx_lumi grid luminosity index
    * @param m coefficient functions
+   * @return contribution to integral
    */
   dbl fillLumi(cdbl flux, cuint idx_lumi, const FixedOrder::CoeffMap m) const {
     dbl tot = 0.;
-    // fill any order
-#define fillOrder(label, k, idx, powR, powF)                                                     \
-  if (m.f##label##k) {                                                                           \
-    cdbl weight = this->v.common_weight * m.f##label##k(this->v.rho, this->nl);                  \
-    this->grid->fill(this->v.x1, this->v.x2, this->m2, this->IDX_ORDER_##idx, 0.5, idx_lumi,     \
-                     weight* this->v.vegas_weight* this->v.x1* this->v.x2);                      \
-    tot += weight * flux * pow(this->as, 2 + k) * pow(this->logR, powR) * pow(this->logF, powF); \
-  }
     // LO
     if ((this->order_mask & ORDER_LO) == ORDER_LO) {
-      fillOrder(, 0, LO, 0, 0);
+      if (m.f0) {
+        cdbl w0 = m.f0(this->v.rho, this->nl);
+        tot += this->fill(flux, 0, this->IDX_ORDER_LO, 0, 0, idx_lumi, w0);
+      }
     }
     // NLO
     if ((this->order_mask & ORDER_NLO) == ORDER_NLO) {
-      fillOrder(, 1, NLO, 0, 0);
+      if (m.f1) {
+        cdbl w1 = m.f1(this->v.rho, this->nl);
+        tot += this->fill(flux, 1, this->IDX_ORDER_NLO, 0, 0, idx_lumi, w1);
+      }
       // SV
-      fillOrder(barR, 1, NLO_R, 1, 0);
-      fillOrder(barF, 1, NLO_F, 0, 1);
+      if (m.fbarR1) {
+        cdbl wR1 = m.fbarR1(this->v.rho, this->nl);
+        tot += this->fill(flux, 1, this->IDX_ORDER_NLO_R, 1, 0, idx_lumi, wR1);
+        tot += this->fill(flux, 1, this->IDX_ORDER_NLO, 0, 0, idx_lumi, wR1 * this->logC);
+      }
+      if (m.fbarF1) {
+        cdbl wF1 = m.fbarF1(this->v.rho, this->nl);
+        tot += this->fill(flux, 1, this->IDX_ORDER_NLO_F, 0, 1, idx_lumi, wF1);
+        tot += this->fill(flux, 1, this->IDX_ORDER_NLO, 0, 0, idx_lumi, wF1 * this->logC);
+      }
     }
     // NNLO
     if ((this->order_mask & ORDER_NNLO) == ORDER_NNLO) {
-      fillOrder(, 2, NNLO, 0, 0);
+      if (m.f2) {
+        cdbl w2 = m.f2(this->v.rho, this->nl);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO, 0, 0, idx_lumi, w2);
+      }
       // SV^1
-      fillOrder(barR, 2, NNLO_R, 1, 0);
-      fillOrder(barF, 2, NNLO_F, 0, 1);
+      if (m.fbarR2) {
+        cdbl wR2 = m.fbarR2(this->v.rho, this->nl);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_R, 1, 0, idx_lumi, wR2);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO, 0, 0, idx_lumi, wR2 * this->logC);
+      }
+      if (m.fbarF2) {
+        cdbl wF2 = m.fbarF2(this->v.rho, this->nl);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_F, 0, 1, idx_lumi, wF2);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO, 0, 0, idx_lumi, wF2 * this->logC);
+      }
       // SV^2
-      fillOrder(barRR, 2, NNLO_RR, 2, 0);
-      fillOrder(barRF, 2, NNLO_RF, 1, 1);
-      fillOrder(barFF, 2, NNLO_FF, 0, 2);
+      if (m.fbarRR2) {
+        cdbl wRR2 = m.fbarRR2(this->v.rho, this->nl);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_RR, 2, 0, idx_lumi, wRR2);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO, 0, 0, idx_lumi, wRR2 * pow(this->logC, 2));
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_R, 1, 0, idx_lumi, wRR2 * 2. * this->logC);
+      }
+      if (m.fbarRF2) {
+        cdbl wRF2 = m.fbarRF2(this->v.rho, this->nl);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_RF, 2, 0, idx_lumi, wRF2);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO, 0, 0, idx_lumi, wRF2 * pow(this->logC, 2));
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_R, 1, 0, idx_lumi, wRF2 * this->logC);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_F, 0, 1, idx_lumi, wRF2 * this->logC);
+      }
+      if (m.fbarFF2) {
+        cdbl wFF2 = m.fbarFF2(this->v.rho, this->nl);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_FF, 0, 2, idx_lumi, wFF2);
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO, 0, 0, idx_lumi, wFF2 * pow(this->logC, 2));
+        tot += this->fill(flux, 2, this->IDX_ORDER_NNLO_F, 0, 1, idx_lumi, wFF2 * 2. * this->logC);
+      }
     }
     return tot;
   }
 
   /** @brief Cache alpha_s at the renormalization scale */
   void setAlphaS() {
-    cdbl muR2 = this->xiR * this->xiR * this->m2;
+    cdbl muR2 = this->xiR * this->xiR * this->mu2;
     this->as = this->pdf->alphasQ2(muR2);
   }
 
@@ -267,6 +325,7 @@ class Kernel : public HepSource::Integrand {
       : m2(m2), nl(nl), order_mask(order_mask), lumi_mask(lumi_mask) {
     // 1/m2 to get the dimension correct and convert to pb
     this->v.norm = 0.38937966e9 / this->m2;
+    this->setGridCentralScaleRatio();
     this->setScaleRatios();
   }
 
@@ -283,9 +342,9 @@ class Kernel : public HepSource::Integrand {
   }
 
   /**
-   * @brief Set renormalization and factorization scale ratio \f$\xi = \mu/m\f$
-   * @param xiR renormalization scale ratio \f$\xi_R = \mu_R/m\f$
-   * @param xiF factorization scale ratio \f$\xi_R = \mu_F/m\f$
+   * @brief Set renormalization and factorization scale ratios \f$\xi_{R/F} = \mu_{R/F}/m\f$
+   * @param xiR (linear) renormalization scale ratio \f$\xi_R = \mu_R/m\f$
+   * @param xiF (linear) factorization scale ratio \f$\xi_F = \mu_F/m\f$
    */
   void setScaleRatios(cdbl xiR = 1., cdbl xiF = 1.) {
     this->xiR = xiR;
@@ -293,8 +352,19 @@ class Kernel : public HepSource::Integrand {
     // recalculate as
     if (this->hasPDF()) this->setAlphaS();
     this->xiF = xiF;
-    this->muF2 = xiF * xiF * this->m2;
+    this->muF2 = xiF * xiF * this->mu2;
     this->logF = 2. * log(xiF);
+  }
+
+  /**
+   * @brief Set grid central scale ratio \f$\xi = \mu/m\f$
+   * @param xi (linear) central scale ratio \f$\xi = \mu/m\f$
+   */
+  void setGridCentralScaleRatio(cdbl xi = 1.) {
+    this->xi = xi;
+    this->mu2 = xi * xi * this->m2;
+    this->logC = 2. * log(xi);
+    this->setScaleRatios(this->xiR, this->xiF);
   }
 
   /**
@@ -331,6 +401,10 @@ class Kernel : public HepSource::Integrand {
     (void)k;
     (void)aux;
     this->v.update(x[0], x[1], vegas_weight);
+    if (fabs(this->v.rho - 1.) < 1e-10) {
+      f[0] = 0.;
+      return;
+    }
     // Collect all pieces
     dbl tot = 0.;
     // fill any channel
@@ -351,6 +425,7 @@ class Kernel : public HepSource::Integrand {
     // quark-quark' channel
     addLumiChannel(QQPRIME, qqprime);
     f[0] = tot;
+    if (!std::isfinite(tot)) throw std::domain_error("Integrand is not finite!");
   }
 
   /** @brief Initialize grid */
@@ -423,8 +498,8 @@ class Kernel : public HepSource::Integrand {
     // create the PineAPPL grid
     PineAPPL::KeyVal kv;
     kv.set_double("x_min", this->rho_h);
-    kv.set_double("q2_min", this->m2 * 0.99);
-    kv.set_double("q2_max", this->m2 * 1.01);
+    kv.set_double("q2_min", this->mu2 * 0.99);
+    kv.set_double("q2_max", this->mu2 * 1.01);
     kv.set_double("q2_bins", 1);
     this->grid.reset(new PineAPPL::Grid(lumi, orders, bins, kv));
   }
@@ -433,11 +508,11 @@ class Kernel : public HepSource::Integrand {
   void optimizeGrid() const { this->grid->optimize(); }
 
   /**
-   * @brief add raw metadata to grid
+   * @brief add scoped metadata to grid
    * @param key key
    * @param value value
    */
-  void addRawMetadata(str key, str value) const {
+  void addScopedMetadata(str key, str value) const {
 #define kKernelKeyStrSize 100
     char buffer[kKernelKeyStrSize];
     snprintf(buffer, kKernelKeyStrSize, "MaunaKea/%s", key.c_str());
@@ -451,21 +526,23 @@ class Kernel : public HepSource::Integrand {
 #define kKernelValStrSize 100
     char buffer[kKernelValStrSize];
     snprintf(buffer, kKernelValStrSize, "%e", this->m2);
-    this->addRawMetadata("m2", buffer);
+    this->addScopedMetadata("m2", buffer);
     snprintf(buffer, kKernelValStrSize, "%u", this->nl);
-    this->addRawMetadata("nl", buffer);
+    this->addScopedMetadata("nl", buffer);
     snprintf(buffer, kKernelValStrSize, "%u", this->order_mask);
-    this->addRawMetadata("order_mask", buffer);
+    this->addScopedMetadata("order_mask", buffer);
     snprintf(buffer, kKernelValStrSize, "%u", this->lumi_mask);
-    this->addRawMetadata("lumi_mask", buffer);
+    this->addScopedMetadata("lumi_mask", buffer);
     snprintf(buffer, kKernelValStrSize, "%e", this->S_h);
-    this->addRawMetadata("hadronicS", buffer);
+    this->addScopedMetadata("hadronicS", buffer);
+    snprintf(buffer, kKernelValStrSize, "%e", this->xi);
+    this->addScopedMetadata("xi", buffer);
     snprintf(buffer, kKernelValStrSize, "%e", this->xiR);
-    this->addRawMetadata("xiR", buffer);
+    this->addScopedMetadata("xiR", buffer);
     snprintf(buffer, kKernelValStrSize, "%e", this->xiF);
-    this->addRawMetadata("xiF", buffer);
+    this->addScopedMetadata("xiF", buffer);
     snprintf(buffer, kKernelValStrSize, "%s#%d", this->pdf->set().name().c_str(), this->pdf->memberID());
-    this->addRawMetadata("PDF", buffer);
+    this->addScopedMetadata("PDF", buffer);
     this->grid->set_key_value("y_label", "sigma_tot");
     this->grid->set_key_value("y_label_tex", "\\sigma_{tot}");
     this->grid->set_key_value("y_label", "pb");
