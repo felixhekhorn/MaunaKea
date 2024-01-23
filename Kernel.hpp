@@ -198,7 +198,6 @@ class Kernel : public HepSource::Integrand {
   dbl fill(cdbl flux, cuint k, cuint idx_order, cuint powR, cuint powF, cuint idx_lumi, cdbl weight) const {
     cdbl grid_weight = weight * this->v.vegas_weight * this->v.x1 * this->v.x2;
     this->grid->fill(this->v.x1, this->v.x2, this->mu2, idx_order, 0.5, idx_lumi, grid_weight);
-    if (!std::isfinite(weight)) printf("%e %e %e %e\n", weight, this->v.x1, this->v.x2, this->v.rho);
     return weight * flux * pow(this->as, 2 + k) * pow(this->logR, powR) * pow(this->logF, powF);
   }
 
