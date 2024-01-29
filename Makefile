@@ -8,7 +8,11 @@ DVEGAS_DEPS != pkg-config --cflags --libs dvegas
 MaunaKea: main.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
 	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o $@
 
+dE: 1612.05582/dE.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
+	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o 1612.05582/dE
+
 PHONY: clean
 
 clean:
 	rm -f MaunaKea
+	rm -f 1612.05582/dE

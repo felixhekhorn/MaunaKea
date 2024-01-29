@@ -1,5 +1,4 @@
 /**
- * @file config.h
  * @brief includes all common header files and defines types and shortcuts
  */
 
