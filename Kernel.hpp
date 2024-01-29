@@ -545,7 +545,7 @@ class Kernel : public HepSource::Integrand {
     this->addScopedMetadata("PDF", buffer);
     this->grid->set_key_value("y_label", "sigma_tot");
     this->grid->set_key_value("y_label_tex", "\\sigma_{tot}");
-    this->grid->set_key_value("y_label", "pb");
+    this->grid->set_key_value("y_unit", "pb");
   }
 
   /**
