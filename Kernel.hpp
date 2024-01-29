@@ -196,9 +196,10 @@ class Kernel : public HepSource::Integrand {
    * @return contribution to integral
    */
   dbl fill(cdbl flux, cuint k, cuint idx_order, cuint powR, cuint powF, cuint idx_lumi, cdbl weight) const {
-    cdbl grid_weight = weight * this->v.vegas_weight * this->v.x1 * this->v.x2;
+    cdbl normed_weight = this->v.common_weight * weight;
+    cdbl grid_weight = normed_weight * this->v.vegas_weight * this->v.x1 * this->v.x2;
     this->grid->fill(this->v.x1, this->v.x2, this->mu2, idx_order, 0.5, idx_lumi, grid_weight);
-    return weight * flux * pow(this->as, 2 + k) * pow(this->logR, powR) * pow(this->logF, powF);
+    return normed_weight * flux * pow(this->as, 2 + k) * pow(this->logR, powR) * pow(this->logF, powF);
   }
 
   /**
