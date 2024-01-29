@@ -5,14 +5,14 @@ int fig1() {
   cdbl m2 = pow(1.51, 2);
   cdbl Sh_min = pow(20., 2);
   cdbl Sh_max = pow(1e4, 2);
-  cuint ndata = 10;
+  cuint ndata = 25;
   for (uint j = 0; j < ndata; ++j) {
     cdbl logS_h = log(Sh_min) + (log(Sh_max) - log(Sh_min)) * j / (ndata - 1);
     cdbl S_h = exp(logS_h);
-    printf("j = %d, sqrt(S) = %e\n", j, S_h);
+    printf("j = %d, sqrt(S) = %e\n", j, pow(S_h, 0.5));
     // init object
-    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO, MaunaKea::Kernel::LUMI_ALL);
-    // mk.intCfg.calls = 50000;
+    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
+    mk.intCfg.calls = 50000;
     mk.setHadronicS(S_h);
     mk.setPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0);
     mk.setGridCentralScaleRatio(2.);

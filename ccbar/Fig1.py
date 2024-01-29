@@ -6,9 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pineappl
 
-# pico to µ
-PB2MUB = 1e-6
-
 
 def merge(ndata: int) -> None:
     """Merge grids"""
@@ -27,7 +24,15 @@ def merge(ndata: int) -> None:
             base = grid
         else:
             base.merge(grid)
-    # done!
+    # update metadata
+    base.scale(1e-6)  # pico to µ
+    base.set_key_value("x1_label", "sqrtS_h")
+    base.set_key_value("x1_label_tex", r"\sqrt{S_h}")
+    base.set_key_value("x1_unit", "GeV")
+    base.set_key_value("y_label", "sigma_tot")
+    base.set_key_value("y_label_tex", r"\sigma_{tot}")
+    base.set_key_value("y_unit", "µb")
+    # save back to disk
     merged_path = pathlib.Path("MaunaKea-ccbar-fig1.pineappl.lz4")
     print(f"Write combined grid to {merged_path}")
     base.write_lz4(merged_path)
@@ -43,9 +48,7 @@ def plot() -> None:
     sqrt_s = grid.bin_left(0)
     # compute central value
     central_pdf = pdfs[0]
-    central = (
-        grid.convolute_with_one(2212, central_pdf.xfxQ2, central_pdf.alphasQ2) * PB2MUB
-    )
+    central = grid.convolute_with_one(2212, central_pdf.xfxQ2, central_pdf.alphasQ2)
     # # compute SV
     # xis = []
     # for xif in (0.5, 1.0, 2.0):
@@ -75,13 +78,13 @@ def plot() -> None:
     # plot
     fig, ax = plt.subplots(1, 1)
     # ax.fill_between(sqrt_s, central - tot_err, central + tot_err, alpha=0.5)
-    ax.plot(sqrt_s, central, color="red")
+    ax.plot(sqrt_s, central)
     ax.set_xscale("log")
-    ax.set_xlabel(r"$\sqrt{s}$ (GeV)")
+    ax.set_xlabel(r"$\sqrt{s}$ [GeV]")
     # ax.set_xlim(35.0, 1e5)
     ax.set_yscale("log")
-    ax.set_ylabel(r"$\sigma_{c\bar{c}}$ (µb)")
-    # ax.set_ylim(1e-5, 5e5)
+    ax.set_ylabel(r"$\sigma_{c\bar{c}}$ [µb]")
+    ax.set_ylim(1, 5e4)
     ax.tick_params(
         "both",
         which="both",
