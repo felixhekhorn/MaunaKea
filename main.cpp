@@ -22,10 +22,10 @@ int Hathor() {
 int toppp() {
   cuint nl = 5;
   cdbl m2 = pow(172.5, 2);
-  cdbl S_h = pow(8e3, 2);
+  cdbl S_h = pow(7e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_NNLO, MaunaKea::Kernel::LUMI_GG);
-  mk.intCfg.calls = 50000;
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO, MaunaKea::Kernel::LUMI_GG);
+  // mk.intCfg.calls = 5000;
   mk.intCfg.verbosity = 3;
   mk.setHadronicS(S_h);
   mk.setPDF("NNPDF40_nnlo_as_01180", 0);
@@ -40,6 +40,6 @@ int toppp() {
 }
 
 int main() {
-  return Hathor();
-  // return toppp();
+  // return Hathor();
+  return toppp();
 }

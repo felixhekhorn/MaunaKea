@@ -11,8 +11,12 @@ MaunaKea: main.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp Mauna
 dE: 1612.05582/dE.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
 	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o 1612.05582/dE
 
+ccbar: ccbar/ccbar.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
+	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o ccbar/ccbar
+
 PHONY: clean
 
 clean:
 	rm -f MaunaKea
 	rm -f 1612.05582/dE
+	rm -f ccbar/ccbar
