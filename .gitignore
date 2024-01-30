@@ -3,6 +3,7 @@ PineAPPL.hpp
 MaunaKea
 1612.05582/dE
 ccbar/ccbar
+ccbar/*.csv
 
 *.pineappl.lz4
 *.pdf
