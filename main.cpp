@@ -1,15 +1,15 @@
 #include "./MaunaKea.hpp"
 
 int Hathor() {
-  cuint nl = 5;
-  cdbl m2 = pow(172.5, 2);
-  cdbl S_h = pow(8e3, 2);
+  cuint nl = 3;
+  cdbl m2 = pow(1.51, 2);
+  cdbl S_h = pow(8e2, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO, MaunaKea::Kernel::LUMI_QQBAR);
-  mk.intCfg.calls = 50000;
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
+  mk.intCfg.calls = 100000;
   mk.intCfg.verbosity = 3;
   mk.setHadronicS(S_h);
-  mk.setPDF("NNPDF40_nnlo_as_01180", 0);
+  mk.setPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0);
   // fill the grid
   mk.run();
   const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
@@ -40,6 +40,6 @@ int toppp() {
 }
 
 int main() {
-  // return Hathor();
-  return toppp();
+  return Hathor();
+  // return toppp();
 }

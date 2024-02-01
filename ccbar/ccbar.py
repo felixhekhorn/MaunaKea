@@ -11,7 +11,7 @@ TARGET_NAME = "MaunaKea-ccbar-fig1.pineappl.lz4"
 
 
 def merge(ndata: int) -> None:
-    """Merge grids"""
+    """Merge grids."""
     # merge grids according to their c.o.m. energy
     base = None
     for j in range(ndata):
@@ -41,17 +41,15 @@ def merge(ndata: int) -> None:
     base.write_lz4(merged_path)
 
 
-def extract_order(
-    grid: pineappl.grid.Grid, pdfs: list(lhapdf.PDF), k: int
+def extract_sv_by_order(
+    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto: int
 ) -> pd.DataFrame:
     """Extract a given PTO together with its SV."""
     # compute central value
-    order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + k, 0, True)
-    central_pdf = pdfs[0]
+    order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto, 0, True)
     central = grid.convolute_with_one(
         2212, central_pdf.xfxQ2, central_pdf.alphasQ2, order_mask=order_mask
     )
-    sqrt_s = grid.bin_left(0)
     # compute SV
     xis = []
     for xif in (0.5, 1.0, 2.0):
@@ -59,17 +57,42 @@ def extract_order(
             if xif / xir >= 4.0 or xir / xif >= 4.0:
                 continue
             xis.append((xir, xif))
-    # xis = [(0.5*xi0, 0.5*xi0), (2.*xi0, 2.*xi0)]
+    # xis = [(0.5, 0.5), (2.0, 2.0)]
     sv_vals = (
         grid.convolute_with_one(
             2212, central_pdf.xfxQ2, central_pdf.alphasQ2, xi=xis, order_mask=order_mask
         )
-    ).reshape(len(sqrt_s), 7)
+    ).reshape(len(central), 7)
     df = pd.DataFrame()
-    df["sqrt_s"] = sqrt_s
+    df["sqrt_s"] = grid.bin_left(0)
     df["central"] = central
     df["sv_min"] = np.min(sv_vals, axis=1)
     df["sv_max"] = np.max(sv_vals, axis=1)
+    return df
+
+
+def extract_lumis_by_order(
+    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto: int
+) -> pd.DataFrame:
+    """Extract lumi fraction for a given PTO."""
+    order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto, 0, True)
+    full = grid.convolute_with_one(
+        2212, central_pdf.xfxQ2, central_pdf.alphasQ2, order_mask=order_mask
+    )
+    df = pd.DataFrame()
+    df["sqrt_s"] = grid.bin_left(0)
+    df["total"] = full
+    for lu, lab in enumerate(("gg", "qqbar", "gq")):
+        lumi_mask = [False] * 6
+        lumi_mask[lu] = True
+        lumi = grid.convolute_with_one(
+            2212,
+            central_pdf.xfxQ2,
+            central_pdf.alphasQ2,
+            lumi_mask=lumi_mask,
+            order_mask=order_mask,
+        )
+        df[lab] = lumi
     return df
 
 
@@ -88,16 +111,16 @@ def extract_order(
 
 
 def plot_pto() -> None:
-    """Plot grid"""
+    """Plot convergence of PTO."""
     # prepare objects
     grid_path = pathlib.Path(TARGET_NAME)
     lhapdf.setVerbosity(0)
-    pdfs = lhapdf.mkPDFs("NNPDF40_nlo_pch_as_01180_nf_3")
+    central_pdf = lhapdf.mkPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0)
     grid = pineappl.grid.Grid.read(grid_path)
     # prepare data
     dfs = {}
     for k in range(2 + 1):
-        df = extract_order(grid, pdfs, k)
+        df = extract_sv_by_order(grid, central_pdf, k)
         df.to_csv(f"ccbar-pto-{k}.csv")
         dfs[k] = df
 
@@ -142,16 +165,72 @@ def plot_pto() -> None:
     fig.savefig("ccbar-pto.pdf")
 
 
+def plot_lumi() -> None:
+    """Plot lumi separation."""
+    # prepare objects
+    grid_path = pathlib.Path(TARGET_NAME)
+    lhapdf.setVerbosity(0)
+    central_pdf = lhapdf.mkPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0)
+    grid = pineappl.grid.Grid.read(grid_path)
+    # prepare data
+    dfs = {}
+    for k in range(2 + 1):
+        df = extract_lumis_by_order(grid, central_pdf, k)
+        df.to_csv(f"ccbar-lumi-{k}.csv")
+        dfs[k] = df
+
+    # plot
+    fig, ax = plt.subplots(1, 1)
+    for pto, lab_pto, ls in [
+        (0, "LO", "dotted"),
+        (1, "NLO", "dashed"),
+        (2, "NNLO", "solid"),
+    ]:
+        df = dfs[pto]
+        for lu, (raw_lab, plt_lab) in enumerate(
+            [("gg", "$gg$"), ("qqbar", r"$q\bar{q}$"), ("gq", "$gq$")]
+        ):
+            if raw_lab == "gg" or pto == 2:
+                lab = f"{plt_lab} ({lab_pto})"
+            else:
+                lab = None
+            ax.plot(
+                df["sqrt_s"],
+                df[raw_lab] / df["total"] * 100,
+                label=lab,
+                color=f"C{lu}",
+                linestyle=ls,
+            )
+    ax.set_xscale("log")
+    ax.set_ylabel(r"$\sigma^{ij}/\sigma^{tot}$ [%]")
+    ax.tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig("ccbar-lumi.pdf")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help="sub-command help", required=True)
-    parser_plot = subparsers.add_parser("plot-pto", help="plot grid")
-    parser_plot.set_defaults(mode="plot-pto")
-    parser_merge = subparsers.add_parser("merge", help="merge grids")
+    parser_merge = subparsers.add_parser("merge", help="Merge grids.")
     parser_merge.add_argument("ndata", help="number of points")
     parser_merge.set_defaults(mode="merge")
+    parser_plot = subparsers.add_parser("plot-pto", help="Plot convergence of PTO.")
+    parser_plot.set_defaults(mode="plot-pto")
+    parser_plot = subparsers.add_parser("plot-lumi", help="Plot lumi separation.")
+    parser_plot.set_defaults(mode="plot-lumi")
     args = parser.parse_args()
     if args.mode == "merge":
         merge(int(args.ndata))
     elif args.mode == "plot-pto":
         plot_pto()
+    elif args.mode == "plot-lumi":
+        plot_lumi()
