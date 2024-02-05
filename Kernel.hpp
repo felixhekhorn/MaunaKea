@@ -10,6 +10,36 @@
 
 namespace MaunaKea {
 
+/** @name Order masks */
+///@{
+/** @brief LO marker */
+const cuint ORDER_LO = 1;
+/** @brief NLO marker */
+const cuint ORDER_NLO = 1 << 1;
+/** @brief NNLO marker */
+const cuint ORDER_NNLO = 1 << 2;
+/** @brief all order marker */
+const cuint ORDER_ALL = ORDER_LO | ORDER_NLO | ORDER_NNLO;
+///@}
+
+/** @name Luminosity masks */
+///@{
+/** @brief gluon-gluon marker */
+const cuint LUMI_GG = 1;
+/** @brief quark-antiquark marker */
+const cuint LUMI_QQBAR = 1 << 1;
+/** @brief gluon-quark marker */
+const cuint LUMI_GQ = 1 << 2;
+/** @brief quark-quark marker */
+const cuint LUMI_QQ = 1 << 3;
+/** @brief quark-antiquark' marker */
+const cuint LUMI_QQBARPRIME = 1 << 4;
+/** @brief quark-quark' marker */
+const cuint LUMI_QQPRIME = 1 << 5;
+/** @brief all order marker */
+const cuint LUMI_ALL = LUMI_GG | LUMI_QQBAR | LUMI_GQ | LUMI_QQ | LUMI_QQBARPRIME | LUMI_QQPRIME;
+///@}
+
 /** @brief Integration kernel */
 class Kernel : public HepSource::Integrand {
   /** @brief heavy quark mass */
@@ -284,36 +314,6 @@ class Kernel : public HepSource::Integrand {
   }
 
  public:
-  /** @name Order masks */
-  ///@{
-  /** @brief LO marker */
-  static cuint ORDER_LO = 1;
-  /** @brief NLO marker */
-  static cuint ORDER_NLO = 1 << 1;
-  /** @brief NNLO marker */
-  static cuint ORDER_NNLO = 1 << 2;
-  /** @brief all order marker */
-  static cuint ORDER_ALL = ORDER_LO | ORDER_NLO | ORDER_NNLO;
-  ///@}
-
-  /** @name Luminosity masks */
-  ///@{
-  /** @brief gluon-gluon marker */
-  static cuint LUMI_GG = 1;
-  /** @brief quark-antiquark marker */
-  static cuint LUMI_QQBAR = 1 << 1;
-  /** @brief gluon-quark marker */
-  static cuint LUMI_GQ = 1 << 2;
-  /** @brief quark-quark marker */
-  static cuint LUMI_QQ = 1 << 3;
-  /** @brief quark-antiquark' marker */
-  static cuint LUMI_QQBARPRIME = 1 << 4;
-  /** @brief quark-quark' marker */
-  static cuint LUMI_QQPRIME = 1 << 5;
-  /** @brief all order marker */
-  static cuint LUMI_ALL = LUMI_GG | LUMI_QQBAR | LUMI_GQ | LUMI_QQ | LUMI_QQBARPRIME | LUMI_QQPRIME;
-  ///@}
-
   /**
    * @brief Constructor
    * @param m2 heavy quark mass
@@ -409,7 +409,7 @@ class Kernel : public HepSource::Integrand {
     dbl tot = 0.;
     // fill any channel
 #define addLumiChannel(BIG, small)                                                        \
-  if ((this->lumi_mask & this->LUMI_##BIG) == this->LUMI_##BIG) {                         \
+  if ((this->lumi_mask & LUMI_##BIG) == LUMI_##BIG) {                                     \
     tot += this->fillLumi(this->flux_##small(), this->IDX_LUMI_##BIG, FixedOrder::small); \
   }
     // gluon-gluon channel

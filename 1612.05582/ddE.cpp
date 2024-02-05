@@ -6,7 +6,7 @@ int table1_charm() {
   // cdbl S_h = pow(14e3, 2);
   cdbl S_h = pow(100e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::ORDER_ALL, MaunaKea::LUMI_ALL);
   mk.intCfg.calls = 50000;
   mk.setHadronicS(S_h);
   mk.setPDF("ABMP16_3_nnlo", 0);
@@ -31,7 +31,7 @@ int fig1_charm() {
     cdbl S_h = exp(logS_h);
     printf("j = %d, sqrt(S) = %e", j, S_h);
     // init object
-    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
+    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::ORDER_ALL, MaunaKea::LUMI_ALL);
     mk.intCfg.calls = 50000;
     mk.setHadronicS(S_h);
     mk.setPDF("ABMP16_3_nnlo", 0);
@@ -55,7 +55,7 @@ int table1_bottom() {
   // cdbl S_h = pow(14e3, 2);
   cdbl S_h = pow(100e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::ORDER_ALL, MaunaKea::LUMI_ALL);
   mk.intCfg.calls = 50000;
   mk.setHadronicS(S_h);
   mk.setPDF("ABMP16_4_nnlo", 0);
@@ -80,7 +80,7 @@ int fig1_bottom() {
     cdbl S_h = exp(logS_h);
     printf("j = %d, sqrt(S) = %e", j, S_h);
     // init object
-    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
+    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::ORDER_ALL, MaunaKea::LUMI_ALL);
     mk.intCfg.calls = 50000;
     mk.setHadronicS(S_h);
     mk.setPDF("ABMP16_4_nnlo", 0);

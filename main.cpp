@@ -5,7 +5,7 @@ int Hathor() {
   cdbl m2 = pow(1.51, 2);
   cdbl S_h = pow(8e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO | MaunaKea::Kernel::ORDER_NLO, MaunaKea::Kernel::LUMI_ALL);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::ORDER_LO | MaunaKea::ORDER_NLO, MaunaKea::LUMI_ALL);
   // mk.intCfg.calls = 100000;
   mk.intCfg.verbosity = 3;
   mk.setHadronicS(S_h);
@@ -24,7 +24,7 @@ int toppp() {
   cdbl m2 = pow(172.5, 2);
   cdbl S_h = pow(7e3, 2);
   // init object
-  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_LO, MaunaKea::Kernel::LUMI_GG);
+  MaunaKea::MaunaKea mk(m2, nl, MaunaKea::ORDER_LO, MaunaKea::LUMI_GG);
   // mk.intCfg.calls = 5000;
   mk.intCfg.verbosity = 3;
   mk.setHadronicS(S_h);

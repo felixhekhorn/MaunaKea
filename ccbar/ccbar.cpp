@@ -11,7 +11,7 @@ int fig1() {
     cdbl S_h = exp(logS_h);
     printf("j = %d, sqrt(S) = %e\n", j, pow(S_h, 0.5));
     // init object
-    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::Kernel::ORDER_ALL, MaunaKea::Kernel::LUMI_ALL);
+    MaunaKea::MaunaKea mk(m2, nl, MaunaKea::ORDER_ALL, MaunaKea::LUMI_ALL);
     mk.intCfg.calls = 50000;
     mk.setHadronicS(S_h);
     mk.setPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0);

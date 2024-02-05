@@ -10,8 +10,8 @@ PYBIND_DEPS != python3 -m pybind11 --includes
 MaunaKea: main.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
 	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o $@
 
-dE: 1612.05582/dE.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
-	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o 1612.05582/dE
+ddE: 1612.05582/ddE.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
+	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o 1612.05582/ddE
 
 ccbar: ccbar/ccbar.cpp PineAPPL.hpp config.h FO.hpp Integration.hpp Kernel.hpp MaunaKea.hpp
 	$(CXX) $(CXXFLAGS) $< $(PINEAPPL_DEPS) $(LHAPDF_DEPS) $(GSL_DEPS) $(DVEGAS_DEPS) -o ccbar/ccbar
@@ -23,5 +23,6 @@ PHONY: clean
 
 clean:
 	rm -f MaunaKea
-	rm -f 1612.05582/dE
+	rm -f MaunaKea`python3.10-config --extension-suffix`
+	rm -f 1612.05582/ddE
 	rm -f ccbar/ccbar

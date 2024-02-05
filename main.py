@@ -2,11 +2,11 @@ import MaunaKea
 
 
 def toppp():
-    nl: int = 5
-    m2: float = 172.5**2
-    S_h: float = 7e3**2
+    nl: int = 3
+    m2: float = 1.51**2
+    S_h: float = 8e3**2
     # init object
-    mk = MaunaKea.MaunaKea(m2, nl, 1, 1)
+    mk = MaunaKea.MaunaKea(m2, nl, 3, 63)
     # mk.intCfg.calls = 5000;
     mk.intCfg.verbosity = 3
     mk.setHadronicS(S_h)

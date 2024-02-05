@@ -6,6 +6,10 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(MaunaKea, m) {
   m.doc() = "Hadroproduction of heavy quark flavors";
+  m.attr("ORDER_LO") = MaunaKea::ORDER_LO;
+  m.attr("ORDER_NLO") = MaunaKea::ORDER_NLO;
+  m.attr("ORDER_NNLO") = MaunaKea::ORDER_NNLO;
+  m.attr("ORDER_ALL") = MaunaKea::ORDER_ALL;
 
   py::class_<MaunaKea::IntegrationConfig>(m, "IntegrationConfig")
       .def_readwrite("verbosity", &MaunaKea::IntegrationConfig::verbosity, py::doc("level of output"))
