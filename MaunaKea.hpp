@@ -84,7 +84,7 @@ class MaunaKea {
    * @brief Copy of current integration output
    * @return Integration output
    */
-  IntegrationOutput get_integration_output() const { return IntegrationOutput(this->intOut); }
+  IntegrationOutput getIntegrationOutput() const { return IntegrationOutput(this->intOut); }
 };
 }  // namespace MaunaKea
 #endif  // MAUNAKEA_HPP_

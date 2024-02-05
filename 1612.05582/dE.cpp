@@ -13,7 +13,7 @@ int table1_charm() {
   mk.setScaleRatios(2., 2.);
   // fill the grid
   mk.run();
-  const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
+  const MaunaKea::IntegrationOutput intOut = mk.getIntegrationOutput();
   printf("sigma_tot = %e +- %e [pb]\n", intOut.result, intOut.error);
   // save
   mk.write("MaunaKea-ccbar.pineappl.lz4");
@@ -38,7 +38,7 @@ int fig1_charm() {
     mk.setScaleRatios(2., 2.);
     // fill the grid
     mk.run();
-    const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
+    const MaunaKea::IntegrationOutput intOut = mk.getIntegrationOutput();
     printf("sigma_tot = %e +- %e [pb]\n", intOut.result, intOut.error);
     // save
 #define kPathSize 100
@@ -62,7 +62,7 @@ int table1_bottom() {
   mk.setScaleRatios(2., 2.);
   // fill the grid
   mk.run();
-  const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
+  const MaunaKea::IntegrationOutput intOut = mk.getIntegrationOutput();
   printf("sigma_tot = %e +- %e [pb]\n", intOut.result, intOut.error);
   // save
   mk.write("MaunaKea-bbbar.pineappl.lz4");
@@ -87,7 +87,7 @@ int fig1_bottom() {
     mk.setScaleRatios(2., 2.);
     // fill the grid
     mk.run();
-    const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
+    const MaunaKea::IntegrationOutput intOut = mk.getIntegrationOutput();
     printf("sigma_tot = %e +- %e [pb]\n", intOut.result, intOut.error);
     // save
 #define kPathSize 100

@@ -18,7 +18,7 @@ int fig1() {
     mk.setGridCentralScaleRatio(2.);
     // fill the grid
     mk.run();
-    const MaunaKea::IntegrationOutput intOut = mk.get_integration_output();
+    const MaunaKea::IntegrationOutput intOut = mk.getIntegrationOutput();
     printf("sigma_tot = %e +- %e [pb]\n", intOut.result, intOut.error);
     // save
 #define kPathSize 100
