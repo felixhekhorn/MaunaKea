@@ -1,3 +1,4 @@
+"""Generate Figure 1."""
 import argparse
 import pathlib
 
@@ -6,18 +7,54 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pineappl
 
+import MaunaKea
+
 # pico to µ
 PB2MUB = 1e-6
 
+MASSES = {3: pow(1.67, 2), 4: pow(4.66, 2)}
+NAME = {3: "c", 4: "b"}
+
+
+def labels(nf: int, j: int) -> str:
+    """Build label and grid path."""
+    q = NAME[nf]
+    lab = f"{q}{q}bar"
+    return lab, f"fig1-{lab}-{j}.pineappl.lz4", f"fig1-{lab}.pineappl.lz4"
+
+
+def compute(nl: int, ndata: int) -> None:
+    """Compute grids."""
+    m2: float = MASSES[nl]
+    Sh_min: float = 35.0**2
+    Sh_max: float = 100e3**2
+    for j in range(ndata):
+        logS_h: float = np.log(Sh_min) + (np.log(Sh_max) - np.log(Sh_min)) * j / (
+            ndata - 1
+        )
+        S_h: float = np.exp(logS_h)
+        print(f"j = {j:d}, sqrt(S) = {S_h:e}")
+        # init object
+        mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
+        mk.intCfg.calls = 50000
+        mk.setHadronicS(S_h)
+        mk.setPDF(f"ABMP16_{nl}_nnlo", 0)
+        mk.setCentralScaleRatio(2.0)
+        # fill the grid
+        mk.run()
+        int_out = mk.getIntegrationOutput()
+        print(f"sigma_tot = {int_out.result:e} +- {int_out.error:e} [pb]\n")
+        # save
+        mk.write(labels(nl, j)[1])
+
 
 def merge(nf: int, ndata: int) -> None:
-    """Merge grids"""
+    """Merge grids."""
     # merge grids according to their c.o.m. energy
-    q = "c" if nf == 3 else "b"
-    lab = f"{q}{q}bar"
     base = None
     for j in range(ndata):
-        grid_path = pathlib.Path(f"MaunaKea-fig1-{lab}-{j}.pineappl.lz4")
+        lab, pathj, path = labels(nf, j)
+        grid_path = pathlib.Path(pathj)
         grid = pineappl.grid.Grid.read(grid_path)
         # rebin by S_h
         s_h = float(grid.key_values()["MaunaKea/hadronicS"])
@@ -30,18 +67,16 @@ def merge(nf: int, ndata: int) -> None:
         else:
             base.merge(grid)
     # done!
-    merged_path = pathlib.Path(f"MaunaKea-fig1-{lab}.pineappl.lz4")
+    merged_path = pathlib.Path(path)
     print(f"Write combined grid to {merged_path}")
     base.write_lz4(merged_path)
 
 
 def plot(nf: int) -> None:
-    """Plot grid"""
+    """Plot grid."""
     # prepare objects
-    xi0 = 2.0
-    q = "c" if nf == 3 else "b"
-    lab = f"{q}{q}bar"
-    grid_path = pathlib.Path(f"MaunaKea-fig1-{lab}.pineappl.lz4")
+    lab, _pathj, path = labels(nf, 0)
+    grid_path = pathlib.Path(path)
     lhapdf.setVerbosity(0)
     pdfs = lhapdf.mkPDFs(f"ABMP16_{nf}_nnlo")
     grid = pineappl.grid.Grid.read(grid_path)
@@ -49,10 +84,7 @@ def plot(nf: int) -> None:
     # compute central value
     central_pdf = pdfs[0]
     central = (
-        grid.convolute_with_one(
-            2212, central_pdf.xfxQ2, central_pdf.alphasQ2, xi=[(xi0, xi0)]
-        )
-        * PB2MUB
+        grid.convolute_with_one(2212, central_pdf.xfxQ2, central_pdf.alphasQ2) * PB2MUB
     )
     # compute SV
     xis = []
@@ -60,7 +92,7 @@ def plot(nf: int) -> None:
         for xir in (0.5, 1.0, 2.0):
             if xif / xir >= 4.0 or xir / xif >= 4.0:
                 continue
-            xis.append((xir * xi0, xif * xi0))
+            xis.append((xir, xif))
     # xis = [(0.5*xi0, 0.5*xi0), (2.*xi0, 2.*xi0)]
     sv_vals = (
         grid.convolute_with_one(2212, central_pdf.xfxQ2, central_pdf.alphasQ2, xi=xis)
@@ -72,9 +104,7 @@ def plot(nf: int) -> None:
     pdf_vals = []
     for pdf in pdfs[1:]:
         pdf_vals.append(
-            grid.convolute_with_one(2212, pdf.xfxQ2, pdf.alphasQ2, xi=[(xi0, xi0)])
-            * PB2MUB
-            - central
+            grid.convolute_with_one(2212, pdf.xfxQ2, pdf.alphasQ2) * PB2MUB - central
         )
     pdf_err = np.sum(np.power(pdf_vals, 2), axis=0)
     # combine uncert
@@ -88,6 +118,7 @@ def plot(nf: int) -> None:
     ax.set_xlabel(r"$\sqrt{s}$ (GeV)")
     ax.set_xlim(35.0, 1e5)
     ax.set_yscale("log")
+    q = NAME[nf]
     ax.set_ylabel(f"$\\sigma_{{{q}\\bar{{{q}}}}}$ (µb)")
     ax.set_ylim(1e-5, 5e5)
     ax.tick_params(
@@ -106,15 +137,22 @@ def plot(nf: int) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help="sub-command help", required=True)
-    parser_plot = subparsers.add_parser("plot", help="plot grid")
-    parser_plot.add_argument("nf", help="number of light flavors")
-    parser_plot.set_defaults(mode="plot")
+    parser_compute = subparsers.add_parser("compute", help="compute grids")
+    parser_compute.add_argument("nf", help="number of light flavors")
+    parser_compute.add_argument("ndata", help="number of points")
+    parser_compute.set_defaults(mode="compute")
     parser_merge = subparsers.add_parser("merge", help="merge grids")
     parser_merge.add_argument("nf", help="number of light flavors")
     parser_merge.add_argument("ndata", help="number of points")
     parser_merge.set_defaults(mode="merge")
+    parser_plot = subparsers.add_parser("plot", help="plot grid")
+    parser_plot.add_argument("nf", help="number of light flavors")
+    parser_plot.set_defaults(mode="plot")
     args = parser.parse_args()
-    if args.mode == "merge":
+    mode = args.mode.strip().lower()
+    if mode == "compute":
+        compute(int(args.nf), int(args.ndata))
+    elif mode == "merge":
         merge(int(args.nf), int(args.ndata))
-    elif args.mode == "plot":
+    elif mode == "plot":
         plot(int(args.nf))

@@ -1,3 +1,4 @@
+"""Generate Table 1."""
 import argparse
 import pathlib
 
@@ -26,13 +27,13 @@ def compute(nf: int, sqrt_s: int) -> None:
     # init object
     mk = MaunaKea.MaunaKea(m2, nf, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
     mk.intCfg.calls = 50000
-    mk.setHadronicS(sqrt_s * sqrt_s * 1e6)
+    mk.setHadronicS(sqrt_s * sqrt_s * 1e6)  # TeV to GeV
     mk.setPDF(f"ABMP16_{nf}_nnlo", 0)
     mk.setCentralScaleRatio(2.0)
     # fill the grid
     mk.run()
     int_out = mk.getIntegrationOutput()
-    print("sigma_tot = {:e} +- {:e} [pb]\n".format(int_out.result, int_out.error))
+    print(f"sigma_tot = {int_out.result:e} +- {int_out.error:e} [pb]\n")
     # save
     mk.write(labels(nf, sqrt_s)[1])
 
@@ -87,7 +88,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", help="compute or plot")
     parser.add_argument("nf", help="number of light flavors")
-    parser.add_argument("sqrtS", help="square root of c.o.m. energy")
+    parser.add_argument("sqrtS", help="square root of c.o.m. energy [TeV]")
     args = parser.parse_args()
 
     nf = int(args.nf)
