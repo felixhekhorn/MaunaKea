@@ -10,6 +10,13 @@ PYBIND11_MODULE(MaunaKea, m) {
   m.attr("ORDER_NLO") = MaunaKea::ORDER_NLO;
   m.attr("ORDER_NNLO") = MaunaKea::ORDER_NNLO;
   m.attr("ORDER_ALL") = MaunaKea::ORDER_ALL;
+  m.attr("LUMI_GG") = MaunaKea::LUMI_GG;
+  m.attr("LUMI_QQBAR") = MaunaKea::LUMI_QQBAR;
+  m.attr("LUMI_GQ") = MaunaKea::LUMI_GQ;
+  m.attr("LUMI_QQ") = MaunaKea::LUMI_QQ;
+  m.attr("LUMI_QQBARPRIME") = MaunaKea::LUMI_QQBARPRIME;
+  m.attr("LUMI_QQPRIME") = MaunaKea::LUMI_QQPRIME;
+  m.attr("LUMI_ALL") = MaunaKea::LUMI_ALL;
 
   py::class_<MaunaKea::IntegrationConfig>(m, "IntegrationConfig")
       .def_readwrite("verbosity", &MaunaKea::IntegrationConfig::verbosity, py::doc("level of output"))

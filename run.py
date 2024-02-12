@@ -1,12 +1,12 @@
 import MaunaKea
 
 
-def toppp():
+def run() -> None:
     nl: int = 3
     m2: float = 1.51**2
     S_h: float = 8e3**2
     # init object
-    mk = MaunaKea.MaunaKea(m2, nl, 3, 63)
+    mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_LO, MaunaKea.LUMI_ALL)
     # mk.intCfg.calls = 5000;
     mk.intCfg.verbosity = 3
     mk.setHadronicS(S_h)
@@ -21,4 +21,4 @@ def toppp():
 
 
 if __name__ == "__main__":
-    toppp()
+    run()
