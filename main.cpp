@@ -29,7 +29,7 @@ int toppp() {
   mk.intCfg.verbosity = 3;
   mk.setHadronicS(S_h);
   mk.setPDF("NNPDF40_nnlo_as_01180", 0);
-  // mk.setGridCentralScaleRatio(2.);
+  // mk.setCentralScaleRatio(2.);
   // fill the grid
   mk.run();
   const MaunaKea::IntegrationOutput intOut = mk.getIntegrationOutput();

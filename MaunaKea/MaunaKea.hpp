@@ -1,5 +1,5 @@
-#ifndef MAUNAKEA_HPP_
-#define MAUNAKEA_HPP_
+#ifndef MAUNAKEA_MAUNAKEA_HPP_
+#define MAUNAKEA_MAUNAKEA_HPP_
 
 #include "./Integration.hpp"
 #include "./Kernel.hpp"
@@ -47,7 +47,7 @@ class MaunaKea {
    * @brief Set grid central scale ratio \f$\xi = \mu/m\f$
    * @param xi (linear) central scale ratio \f$\xi = \mu/m\f$
    */
-  void setGridCentralScaleRatio(cdbl xi) { this->k.setGridCentralScaleRatio(xi); }
+  void setCentralScaleRatio(cdbl xi) { this->k.setCentralScaleRatio(xi); }
 
   /**
    * @brief Set reference PDF
@@ -87,4 +87,4 @@ class MaunaKea {
   IntegrationOutput getIntegrationOutput() const { return IntegrationOutput(this->intOut); }
 };
 }  // namespace MaunaKea
-#endif  // MAUNAKEA_HPP_
+#endif  // MAUNAKEA_MAUNAKEA_HPP_

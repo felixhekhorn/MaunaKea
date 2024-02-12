@@ -1,6 +1,6 @@
 
-#ifndef INTEGRATION_HPP_
-#define INTEGRATION_HPP_
+#ifndef MAUNAKEA_INTEGRATION_HPP_
+#define MAUNAKEA_INTEGRATION_HPP_
 
 #include <dvegas/dvegas.h>
 
@@ -140,4 +140,4 @@ dbl integrate2D(IntKerT* K, const IntegrationConfig& cfg, IntegrationOutput* out
 }
 }  // namespace MaunaKea
 
-#endif  // INTEGRATION_HPP_
+#endif  // MAUNAKEA_INTEGRATION_HPP_

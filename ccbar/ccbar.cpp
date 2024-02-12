@@ -15,7 +15,7 @@ int fig1() {
     mk.intCfg.calls = 50000;
     mk.setHadronicS(S_h);
     mk.setPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0);
-    mk.setGridCentralScaleRatio(2.);
+    mk.setCentralScaleRatio(2.);
     // fill the grid
     mk.run();
     const MaunaKea::IntegrationOutput intOut = mk.getIntegrationOutput();

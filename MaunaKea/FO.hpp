@@ -1,5 +1,5 @@
-#ifndef FO_HPP_
-#define FO_HPP_
+#ifndef MAUNAKEA_FO_HPP_
+#define MAUNAKEA_FO_HPP_
 
 #include <gsl/gsl_sf.h>
 
@@ -960,4 +960,4 @@ const CoeffMap qqprime = {0, 0, 0, 0, f2qqprime, fbarF2qqprime, 0, fbarFF2qqprim
 
 }  // namespace MaunaKea
 
-#endif  // FO_HPP_
+#endif  // MAUNAKEA_FO_HPP_

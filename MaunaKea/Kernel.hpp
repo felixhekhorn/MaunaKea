@@ -1,5 +1,5 @@
-#ifndef KERNEL_HPP_
-#define KERNEL_HPP_
+#ifndef MAUNAKEA_KERNEL_HPP_
+#define MAUNAKEA_KERNEL_HPP_
 
 #include <memory>
 #include <vector>
@@ -325,7 +325,7 @@ class Kernel : public HepSource::Integrand {
       : m2(m2), nl(nl), order_mask(order_mask), lumi_mask(lumi_mask) {
     // 1/m2 to get the dimension correct and convert to pb
     this->v.norm = 0.38937966e9 / this->m2;
-    this->setGridCentralScaleRatio();
+    this->setCentralScaleRatio();
     this->setScaleRatios();
   }
 
@@ -360,7 +360,7 @@ class Kernel : public HepSource::Integrand {
    * @brief Set grid central scale ratio \f$\xi = \mu/m\f$
    * @param xi (linear) central scale ratio \f$\xi = \mu/m\f$
    */
-  void setGridCentralScaleRatio(cdbl xi = 1.) {
+  void setCentralScaleRatio(cdbl xi = 1.) {
     this->xi = xi;
     this->mu2 = xi * xi * this->m2;
     this->logC = 2. * log(xi);
@@ -562,4 +562,4 @@ class Kernel : public HepSource::Integrand {
 };
 }  // namespace MaunaKea
 
-#endif  // KERNEL_HPP_
+#endif  // MAUNAKEA_KERNEL_HPP_

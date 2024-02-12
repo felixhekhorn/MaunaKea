@@ -2,8 +2,8 @@
  * @brief includes all common header files and defines types and shortcuts
  */
 
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#ifndef MAUNAKEA_CONFIG_H_
+#define MAUNAKEA_CONFIG_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,4 +34,4 @@ typedef const dbl cdbl;
 cdbl dblNaN = std::nan("");
 ///@}
 
-#endif  // CONFIG_H_
+#endif  // MAUNAKEA_CONFIG_H_

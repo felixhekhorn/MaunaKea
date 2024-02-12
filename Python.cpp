@@ -45,7 +45,7 @@ PYBIND11_MODULE(MaunaKea, m) {
       .def("setHadronicS", &MaunaKea::MaunaKea::setHadronicS, py::doc("Set hadronic Mandelstam S_h"))
       .def("setScaleRatios", &MaunaKea::MaunaKea::setScaleRatios,
            py::doc("Set renormalization and factorization scale ratios xi_{R/F} = mu_{R/F}/m"))
-      .def("setGridCentralScaleRatio", &MaunaKea::MaunaKea::setGridCentralScaleRatio,
+      .def("setCentralScaleRatio", &MaunaKea::MaunaKea::setCentralScaleRatio,
            py::doc("Set grid central scale ratio xi = mu/m"))
       .def("setPDF", &MaunaKea::MaunaKea::setPDF, py::doc("Set reference PDF"))
       .def("run", &MaunaKea::MaunaKea::run, py::doc("Run calculation"))
