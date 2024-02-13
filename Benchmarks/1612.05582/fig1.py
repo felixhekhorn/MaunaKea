@@ -1,4 +1,5 @@
 """Generate Figure 1."""
+
 import argparse
 import pathlib
 

@@ -1,4 +1,5 @@
 """Compute grids."""
+
 import argparse
 import pathlib
 

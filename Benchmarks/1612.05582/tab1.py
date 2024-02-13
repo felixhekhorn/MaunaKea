@@ -1,4 +1,5 @@
 """Generate Table 1."""
+
 import argparse
 import pathlib
 
