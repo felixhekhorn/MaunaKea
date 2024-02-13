@@ -7,38 +7,9 @@ import numpy as np
 import pandas as pd
 import pineappl
 
-TARGET_NAME = "MaunaKea-ccbar-fig1.pineappl.lz4"
+from run import LABELS, PDFS, grid_path
 
-
-def merge(ndata: int) -> None:
-    """Merge grids."""
-    # merge grids according to their c.o.m. energy
-    base = None
-    for j in range(ndata):
-        grid_path = pathlib.Path(f"MaunaKea-ccbar-fig1-{j}.pineappl.lz4")
-        grid = pineappl.grid.Grid.read(grid_path)
-        # rebin by S_h
-        sqrt_s_h = np.sqrt(float(grid.key_values()["MaunaKea/hadronicS"]))
-        print(f"Merging j={j} with √S_h={sqrt_s_h} GeV")
-        br = pineappl.bin.BinRemapper([1.0], [(sqrt_s_h, sqrt_s_h)])
-        grid.set_remapper(br)
-        # start or continue?
-        if base is None:
-            base = grid
-        else:
-            base.merge(grid)
-    # update metadata
-    base.scale(1e-6)  # pico to µ
-    base.set_key_value("x1_label", "sqrtS_h")
-    base.set_key_value("x1_label_tex", r"\sqrt{S_h}")
-    base.set_key_value("x1_unit", "GeV")
-    base.set_key_value("y_label", "sigma_tot")
-    base.set_key_value("y_label_tex", r"\sigma_{tot}")
-    base.set_key_value("y_unit", "µb")
-    # save back to disk
-    merged_path = pathlib.Path(TARGET_NAME)
-    print(f"Write combined grid to {merged_path}")
-    base.write_lz4(merged_path)
+TEX_LABELS = {3: r"c\bar{c}", 4: r"b\bar{b}"}
 
 
 def extract_sv_by_order(
@@ -85,14 +56,13 @@ def extract_lumis_by_order(
     for lu, lab in enumerate(("gg", "qqbar", "gq")):
         lumi_mask = [False] * 6
         lumi_mask[lu] = True
-        lumi = grid.convolute_with_one(
+        df[lab] = grid.convolute_with_one(
             2212,
             central_pdf.xfxQ2,
             central_pdf.alphasQ2,
             lumi_mask=lumi_mask,
             order_mask=order_mask,
         )
-        df[lab] = lumi
     return df
 
 
@@ -110,18 +80,18 @@ def extract_lumis_by_order(
 # pdf_err = np.sum(np.power(pdf_vals, 2), axis=0)
 
 
-def plot_pto() -> None:
+def pto(nl: int) -> None:
     """Plot convergence of PTO."""
     # prepare objects
-    grid_path = pathlib.Path(TARGET_NAME)
+    grid_path_ = pathlib.Path(grid_path(nl))
     lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0)
-    grid = pineappl.grid.Grid.read(grid_path)
+    central_pdf = lhapdf.mkPDF(PDFS[nl], 0)
+    grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
     for k in range(2 + 1):
         df = extract_sv_by_order(grid, central_pdf, k)
-        df.to_csv(f"ccbar-pto-{k}.csv")
+        df.to_csv(f"{LABELS[nl]}-pto-{k}.csv")
         dfs[k] = df
 
     # plot bare
@@ -132,7 +102,7 @@ def plot_pto() -> None:
         axs[0].plot(df["sqrt_s"], df["central"], label=lab)
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
-    axs[0].set_ylabel(r"$\sigma_{c\bar{c}}$ [µb]")
+    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
     axs[0].tick_params(
         "both",
         which="both",
@@ -162,21 +132,21 @@ def plot_pto() -> None:
     )
     axs[1].legend()
     fig.tight_layout()
-    fig.savefig("ccbar-pto.pdf")
+    fig.savefig(f"{LABELS[nl]}-pto.pdf")
 
 
-def plot_lumi() -> None:
+def lumi(nl: int) -> None:
     """Plot lumi separation."""
     # prepare objects
-    grid_path = pathlib.Path(TARGET_NAME)
+    grid_path_ = pathlib.Path(grid_path(nl))
     lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF("NNPDF40_nlo_pch_as_01180_nf_3", 0)
-    grid = pineappl.grid.Grid.read(grid_path)
+    central_pdf = lhapdf.mkPDF(PDFS[nl], 0)
+    grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
     for k in range(2 + 1):
         df = extract_lumis_by_order(grid, central_pdf, k)
-        df.to_csv(f"ccbar-lumi-{k}.csv")
+        df.to_csv(f"{LABELS[nl]}-lumi-{k}.csv")
         dfs[k] = df
 
     # plot
@@ -214,23 +184,15 @@ def plot_lumi() -> None:
     )
     ax.legend()
     fig.tight_layout()
-    fig.savefig("ccbar-lumi.pdf")
+    fig.savefig(f"{LABELS[nl]}-lumi.pdf")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(help="sub-command help", required=True)
-    parser_merge = subparsers.add_parser("merge", help="Merge grids.")
-    parser_merge.add_argument("ndata", help="number of points")
-    parser_merge.set_defaults(mode="merge")
-    parser_plot = subparsers.add_parser("plot-pto", help="Plot convergence of PTO.")
-    parser_plot.set_defaults(mode="plot-pto")
-    parser_plot = subparsers.add_parser("plot-lumi", help="Plot lumi separation.")
-    parser_plot.set_defaults(mode="plot-lumi")
+    parser.add_argument("--pto", help="Plot convergence of PTO.", action="store_true")
+    parser.add_argument("--lumi", help="Plot lumi separation.", action="store_true")
     args = parser.parse_args()
-    if args.mode == "merge":
-        merge(int(args.ndata))
-    elif args.mode == "plot-pto":
-        plot_pto()
-    elif args.mode == "plot-lumi":
-        plot_lumi()
+    if args.pto:
+        pto(3)
+    if args.lumi:
+        lumi(3)

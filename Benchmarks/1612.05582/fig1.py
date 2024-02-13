@@ -33,7 +33,7 @@ def compute(nl: int, ndata: int) -> None:
             ndata - 1
         )
         S_h: float = np.exp(logS_h)
-        print(f"j = {j:d}, sqrt(S) = {S_h:e}")
+        print(f"j = {j:d}, S = {S_h:e}")
         # init object
         mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
         mk.intCfg.calls = 50000
@@ -43,7 +43,7 @@ def compute(nl: int, ndata: int) -> None:
         # fill the grid
         mk.run()
         int_out = mk.getIntegrationOutput()
-        print(f"sigma_tot = {int_out.result:e} +- {int_out.error:e} [pb]\n")
+        print(f"sigma_tot = {int_out.result:e} +- {int_out.error:e} [pb]")
         # save
         mk.write(labels(nl, j)[1])
 

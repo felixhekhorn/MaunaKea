@@ -1,8 +1,5 @@
 MaunaKea/PineAPPL.hpp
 
-ccbar/ccbar
-ccbar/*.csv
-
 *.pineappl.lz4
 *.pdf
 
