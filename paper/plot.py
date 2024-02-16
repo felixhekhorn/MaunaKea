@@ -189,10 +189,11 @@ def lumi(nl: int) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("nl", help="Number of light flavors.")
     parser.add_argument("--pto", help="Plot convergence of PTO.", action="store_true")
     parser.add_argument("--lumi", help="Plot lumi separation.", action="store_true")
     args = parser.parse_args()
     if args.pto:
-        pto(3)
+        pto(int(args.nl))
     if args.lumi:
-        lumi(3)
+        lumi(int(args.nl))

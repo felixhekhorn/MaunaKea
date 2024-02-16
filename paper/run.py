@@ -9,7 +9,8 @@ import pineappl
 import MaunaKea
 
 LABELS = {3: "ccbar", 4: "bbbar"}
-PDFS = {3: "NNPDF40_nlo_pch_as_01180_nf_3", 4: "NNPDF40_nlo_pch_as_01180_nf_4"}
+MASSES = {3: 1.51**2, 4: 4.9**2}
+PDFS = {3: "NNPDF40_nlo_pch_as_01180_nf_3", 4: "MSHT20nnlo_nf4"}
 
 
 def sub_grid_path(nf: int, j: int) -> str:
@@ -22,10 +23,9 @@ def grid_path(nf: int) -> str:
     return f"{LABELS[nf]}.pineappl.lz4"
 
 
-def compute(ndata: int) -> None:
+def compute(nl: int, ndata: int) -> None:
     """Compute grids."""
-    nl: int = 3
-    m2: float = 1.51**2
+    m2: float = MASSES[nl]
     Sh_min: float = 20.0**2
     Sh_max: float = 1e4**2
     for j in range(ndata):
@@ -48,10 +48,9 @@ def compute(ndata: int) -> None:
         mk.write(sub_grid_path(nl, j))
 
 
-def merge(ndata: int) -> None:
+def merge(nl: int, ndata: int) -> None:
     """Merge grids."""
     # merge grids according to their c.o.m. energy
-    nl: int = 3
     base = None
     for j in range(ndata):
         sub_grid_path_ = pathlib.Path(sub_grid_path(nl, j))
@@ -82,11 +81,12 @@ def merge(ndata: int) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("ndata", help="number of points")
+    parser.add_argument("nl", help="Number of light flavors.")
+    parser.add_argument("ndata", help="Number of points.")
     parser.add_argument("-c", "--compute", help="Compute grids.", action="store_true")
     parser.add_argument("-m", "--merge", help="Merge grids.", action="store_true")
     args = parser.parse_args()
     if args.compute:
-        compute(int(args.ndata))
+        compute(int(args.nl), int(args.ndata))
     if args.merge:
-        merge(int(args.ndata))
+        merge(int(args.nl), int(args.ndata))
