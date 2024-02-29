@@ -113,6 +113,28 @@ def orders(nf: int, sqrt_s: int) -> None:
     print(df)
 
 
+def channels(nf: int, sqrt_s: int) -> None:
+    """Split by channels."""
+    # prepare objects
+    _lab, path = labels(nf, sqrt_s)
+    grid_path = pathlib.Path(path)
+    lhapdf.setVerbosity(0)
+    central_pdf = lhapdf.mkPDF(f"ABMP16_{nf}_nnlo", 0)
+    grid = pineappl.grid.Grid.read(grid_path)
+    me = {}
+    labs = ["gg", "qqbar", "gq", "qq", "qqbarprime", "qqprime"]
+    for idx, ch in enumerate(labs):
+        lm = [False] * len(labs)
+        lm[idx] = True
+        central = grid.convolute_with_one(
+            2212, central_pdf.xfxQ2, central_pdf.alphasQ2, lumi_mask=lm
+        )[0]
+        me[ch] = central
+    me["total"] = sum(me.values())
+    df = pd.DataFrame.from_records({"MaunaKea": me})
+    print(df)
+
+
 def main() -> None:
     """CLI entry point"""
     parser = argparse.ArgumentParser()
@@ -130,6 +152,8 @@ def main() -> None:
         plot(nf, sqrt_s)
     elif mode == "orders":
         orders(nf, sqrt_s)
+    elif mode == "channels":
+        channels(nf, sqrt_s)
     else:
         raise ValueError(f"mode has to be compute or plot, but was {mode}")
 
