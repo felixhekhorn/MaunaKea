@@ -122,7 +122,7 @@ def channels(nf: int, sqrt_s: int) -> None:
     central_pdf = lhapdf.mkPDF(f"ABMP16_{nf}_nnlo", 0)
     grid = pineappl.grid.Grid.read(grid_path)
     me = {}
-    labs = ["gg", "qqbar", "gq", "qq", "qqbarprime", "qqprime"]
+    labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     for idx, ch in enumerate(labs):
         lm = [False] * len(labs)
         lm[idx] = True
@@ -138,7 +138,7 @@ def channels(nf: int, sqrt_s: int) -> None:
 def main() -> None:
     """CLI entry point"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="compute or plot")
+    parser.add_argument("mode", help="compute|plot|orders|channels")
     parser.add_argument("nf", help="number of light flavors")
     parser.add_argument("sqrtS", help="square root of c.o.m. energy [TeV]")
     args = parser.parse_args()
@@ -155,7 +155,7 @@ def main() -> None:
     elif mode == "channels":
         channels(nf, sqrt_s)
     else:
-        raise ValueError(f"mode has to be compute or plot, but was {mode}")
+        raise ValueError("unkown mode")
 
 
 if __name__ == "__main__":

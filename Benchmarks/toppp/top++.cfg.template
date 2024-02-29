@@ -15,10 +15,10 @@ muF 1.0
 OrderFO NNLO
 OrderRES NNLL
 /================================= Fixed Order
-LO YES
-NLO NO
-NNLO NO
+LO {% if use_lo %}YES{% else %}NO{% endif %}
+NLO {% if use_nlo %}YES{% else %}NO{% endif %}
+NNLO {% if use_nnlo %}YES{% else %}NO{% endif %}
 /================================= Setup parameters
 Precision 4
 NPdfGrid 100
-PartonChannel all
+PartonChannel {{ pc }}
