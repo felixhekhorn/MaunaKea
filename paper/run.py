@@ -9,8 +9,8 @@ import pineappl
 import MaunaKea
 
 LABELS = {3: "ccbar", 4: "bbbar"}
-MASSES = {3: 1.51**2, 4: 4.9**2}
-PDFS = {3: "NNPDF40_nlo_pch_as_01180_nf_3", 4: "MSHT20nnlo_nf4"}
+MASSES = {3: 1.51**2, 4: 4.92**2}
+PDFS = {3: "NNPDF40_nlo_pch_as_01180_nf_3", 4: "NNPDF40_nnlo_as_01180_nf_4"}
 
 
 def sub_grid_path(nf: int, j: int) -> str:

@@ -5,6 +5,7 @@ import pathlib
 
 import lhapdf
 import numpy as np
+import pandas as pd
 import pineappl
 
 import MaunaKea
@@ -84,6 +85,34 @@ def plot(nf: int, sqrt_s: int) -> None:
         )
 
 
+ref_orders = {
+    (3, 14): {0: 1.77376e09, 1: 2.94737e09, 2: 2.43396e09},
+    (3, 100): {0: 4.97477e09, 1: 9.61826e09, 2: 1.04107e10},
+}
+
+
+def orders(nf: int, sqrt_s: int) -> None:
+    """Split by PTO."""
+    # prepare objects
+    _lab, path = labels(nf, sqrt_s)
+    grid_path = pathlib.Path(path)
+    lhapdf.setVerbosity(0)
+    central_pdf = lhapdf.mkPDF(f"ABMP16_{nf}_nnlo", 0)
+    grid = pineappl.grid.Grid.read(grid_path)
+    me = {}
+    for pto in range(2 + 1):
+        om_true = pineappl.grid.Order.create_mask(grid.orders(), pto + 1, 0, True)
+        om_lower = pineappl.grid.Order.create_mask(grid.orders(), pto, 0, True)
+        om = [a ^ b for (a, b) in zip(om_true, om_lower)]
+        central = grid.convolute_with_one(
+            2212, central_pdf.xfxQ2, central_pdf.alphasQ2, order_mask=om
+        )[0]
+        me[pto] = central
+    df = pd.DataFrame.from_records({"MaunaKea": me, "top++": ref_orders[(nf, sqrt_s)]})
+    df["rel. diff"] = (df["MaunaKea"] - df["top++"]) / df["MaunaKea"]
+    print(df)
+
+
 def main() -> None:
     """CLI entry point"""
     parser = argparse.ArgumentParser()
@@ -99,6 +128,8 @@ def main() -> None:
         compute(nf, sqrt_s)
     elif mode == "plot":
         plot(nf, sqrt_s)
+    elif mode == "orders":
+        orders(nf, sqrt_s)
     else:
         raise ValueError(f"mode has to be compute or plot, but was {mode}")
 
