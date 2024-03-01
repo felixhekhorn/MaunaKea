@@ -1,0 +1,25 @@
+#include <fstream>
+#include <iostream>
+
+#include "Hathor.h"
+#include "HathorPdf.h"
+
+int main() {
+  double mt = {{ m }};
+  double val, err, chi;
+
+  double ecms = {{ sqrt_s }};
+  Hathor::COLLIDERTYPE ctype = Hathor::PP;
+  Lhapdf lhapdf("{{ pdf }}");
+  Hathor XS(lhapdf);
+  XS.setNf({{ nl }});
+  XS.setColliderType(ctype);
+  XS.setSqrtShad(ecms);
+  XS.setScheme({{ scheme }});
+  XS.setPrecision(Hathor::HIGH);
+  XS.PrintOptions();
+  XS.getXsection(mt, mt, mt);
+  XS.getResult(0, val, err, chi);
+  std::cout << mt << " " << XS.getAlphas(mt) << " " << val << " " << err << std::endl;
+  return 0;
+}
