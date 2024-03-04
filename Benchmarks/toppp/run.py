@@ -28,38 +28,72 @@ def compute_mauna_kea(m: float, sqrt_s: int) -> None:
     mk.write(str(GRID_PATH))
 
 
+TOPPP_CFG_TEMPLATE = Environment(
+    loader=FileSystemLoader("."), autoescape=select_autoescape()
+).get_template("top++.cfg.template")
+TOPPP_DEFAULT_VARS = {
+    "m": 175.0,
+    "sqrt_s": 7e3,
+    "svrange": 1.0,
+    "murs": (1.0,),
+    "mufs": (1.0,),
+    "use_lo": False,
+    "use_nlo": False,
+    "use_nnlo": False,
+    "pc": "ALL",
+}
+
+
+def run_toppp(
+    n, m: float, sqrt_s: int, pto: int, ch: str = "ALL", murs=(1.0,), mufs=(1.0,)
+) -> None:
+    """Run top++."""
+    # prepare runcard
+    p_in = pathlib.Path("top++.cfg")
+    v = TOPPP_DEFAULT_VARS.copy()
+    v["m"] = m
+    v["sqrt_s"] = sqrt_s
+    v["svrange"] = max(mufs) * max(murs)
+    v["murs"] = murs
+    v["mufs"] = mufs
+    v["use_" + ("n" * pto) + "lo"] = True
+    v["pc"] = ch
+    p_in.write_text(TOPPP_CFG_TEMPLATE.render(**v), encoding="utf8")
+    # run
+    subprocess.run([TOPPP_EXE, p_in], check=True)
+    # read file
+    p_out = pathlib.Path("top++.res")
+    out = p_out.read_text(encoding="utf8").splitlines()
+    # parse numbers
+    res = []
+    for j in range(n):
+        res.append(float(out[15 + j].split()[-1]))
+    return res
+
+
 def compute_toppp(m: float, sqrt_s: int) -> None:
     """Compute top++ numbers."""
-    # prepare runcard
-    env = Environment(loader=FileSystemLoader("."), autoescape=select_autoescape())
-    template = env.get_template("top++.cfg.template")
-    p_in = pathlib.Path("top++.cfg")
-    my_vars = {
-        "m": m,
-        "sqrt_s": sqrt_s,
-        "use_lo": False,
-        "use_nlo": False,
-        "use_nnlo": False,
-        "pc": "ALL",
-    }
     labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     data = {}
     for ch in labs:
         res = []
         for pto in range(2 + 1):
-            v = my_vars.copy()
-            v["use_" + ("n" * pto) + "lo"] = True
-            v["pc"] = ch
-            p_in.write_text(template.render(**v), encoding="utf8")
-            # run
-            subprocess.run([TOPPP_EXE, p_in], check=True)
-            # read
-            p_out = pathlib.Path("top++.res")
-            out = p_out.read_text(encoding="utf8").splitlines()
-            res.append(float(out[15].split()[-1]))
+            res.append(run_toppp(1, m, sqrt_s, pto, ch)[0])
         data[ch] = res
     df = pd.DataFrame.from_records(data)
     df.to_csv("top++.csv")
+
+
+def compute_toppp_sv(m: float, sqrt_s: int, pto: int, ch: str, abs_xi: float) -> None:
+    """Compute SV top++ numbers."""
+    xis = [1.0 / abs_xi, 1.0, abs_xi]
+    data = []
+    res = list(reversed(run_toppp(9, m, sqrt_s, pto, ch, murs=xis, mufs=xis)))
+    for muf in xis:
+        for mur in xis:
+            data.append({"muf": muf, "mur": mur, "top++": res.pop()})
+    df = pd.DataFrame.from_records(data)
+    df.to_csv("top++_sv.csv")
 
 
 def compare() -> None:
@@ -76,6 +110,7 @@ def compare() -> None:
         lm[idx] = True
         me = []
         for pto in range(2 + 1):
+            # extract correction
             om_true = pineappl.grid.Order.create_mask(grid.orders(), pto + 1, 0, True)
             om_lower = pineappl.grid.Order.create_mask(grid.orders(), pto, 0, True)
             om = [a ^ b for (a, b) in zip(om_true, om_lower)]
@@ -91,15 +126,61 @@ def compare() -> None:
         data[ch] = me
     # top++
     toppp = pd.read_csv("top++.csv", index_col=0)
-    print("top++\n", "-" * 5)
+    print("top++\n", "-" * 5, sep="")
     print(toppp)
     mk = pd.DataFrame.from_records(data)
     print()
-    print("MaunaKea\n", "-" * 8)
+    print("MaunaKea\n", "-" * 8, sep="")
     print(mk)
     diff = (mk - toppp) / toppp
     print()
-    print("rel. diff\n", "-" * 8)
+    print("rel. diff\n", "-" * 8, sep="")
+    print(diff)
+
+
+def compare_sv(pto: int, ch: str, abs_xi: float) -> None:
+    """Compare SV numbers."""
+    # MaunaKea
+    grid_path = pathlib.Path(GRID_PATH)
+    lhapdf.setVerbosity(0)
+    central_pdf = lhapdf.mkPDF("NNPDF40_nnlo_as_01180", 0)
+    grid = pineappl.grid.Grid.read(grid_path)
+    data = {}
+    labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
+    lm = [False] * len(labs)
+    lm[labs.index(ch)] = True
+    me = []
+    # extract correction
+    om_true = pineappl.grid.Order.create_mask(grid.orders(), pto + 1, 0, True)
+    om_lower = pineappl.grid.Order.create_mask(grid.orders(), pto, 0, True)
+    om = [a ^ b for (a, b) in zip(om_true, om_lower)]
+    lin_xis = [1.0 / abs_xi, 1.0, abs_xi]
+    xis = []
+    for muf in lin_xis:
+        for mur in lin_xis:
+            xis.append((mur, muf))
+    me = grid.convolute_with_one(
+        2212,
+        central_pdf.xfxQ2,
+        central_pdf.alphasQ2,
+        order_mask=om,
+        lumi_mask=lm,
+        xi=xis,
+    )
+    data = []
+    for (mur, muf), v in zip(xis, me):
+        data.append({"muf": muf, "mur": mur, "MaunaKea": v})
+    # top++
+    toppp = pd.read_csv("top++_sv.csv", index_col=0)
+    print("top++\n", "-" * 5, sep="")
+    print(toppp)
+    mk = pd.DataFrame.from_records(data)
+    print()
+    print("MaunaKea\n", "-" * 8, sep="")
+    print(mk)
+    diff = (mk["MaunaKea"] - toppp["top++"]) / toppp["top++"]
+    print()
+    print("rel. diff\n", "-" * 8, sep="")
     print(diff)
 
 
@@ -111,13 +192,20 @@ def main() -> None:
 
     m: float = 172.5
     sqrt_s: float = 7e3
-    mode = args.mode.strip().lower()
+    mode: str = args.mode.strip().lower()
+    pto: int = 2
+    ch: str = "gg"
+    abs_xi: float = 2.0
     if mode == "maunakea":
         compute_mauna_kea(m, sqrt_s)
     elif mode == "top++":
         compute_toppp(m, sqrt_s)
+    elif mode == "top++-sv":
+        compute_toppp_sv(m, sqrt_s, pto, ch, abs_xi)
     elif mode == "compare":
         compare()
+    elif mode == "compare-sv":
+        compare_sv(pto, ch, abs_xi)
     else:
         raise ValueError("unkown mode")
 

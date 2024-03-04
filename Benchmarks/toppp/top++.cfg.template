@@ -4,13 +4,13 @@ ECMLHC {{ sqrt_s }}
 WithResummation NO
 PDFuncertainty NO
 PDFset NNPDF40_nnlo_as_01180
-RestrictedScaleVariation 1.0
+RestrictedScaleVariation {{ svrange }}
 /================================= mt(GeV); muF and muR (in units of mt)
 Mtop {{ m }}
 MtopLimit -1.0
 MtopStep 1
-muR 1.0
-muF 1.0
+muR {{ murs|join(', ') }}
+muF {{ mufs|join(', ') }}
 /================================= Resummation
 OrderFO NNLO
 OrderRES NNLL
