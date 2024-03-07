@@ -91,7 +91,9 @@ def compute_toppp_sv(m: float, sqrt_s: int, pto: int, ch: str, abs_xi: float) ->
     res = list(reversed(run_toppp(9, m, sqrt_s, pto, ch, murs=xis, mufs=xis)))
     for muf in xis:
         for mur in xis:
-            data.append({"muf": muf, "mur": mur, "top++": res.pop()})
+            data.append(
+                {"pto": pto, "ch": ch, "muf": muf, "mur": mur, "top++": res.pop()}
+            )
     df = pd.DataFrame.from_records(data)
     df.to_csv("top++_sv.csv")
 
@@ -145,7 +147,6 @@ def compare_sv(pto: int, ch: str, abs_xi: float) -> None:
     lhapdf.setVerbosity(0)
     central_pdf = lhapdf.mkPDF("NNPDF40_nnlo_as_01180", 0)
     grid = pineappl.grid.Grid.read(grid_path)
-    data = {}
     labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     lm = [False] * len(labs)
     lm[labs.index(ch)] = True
@@ -167,34 +168,24 @@ def compare_sv(pto: int, ch: str, abs_xi: float) -> None:
         lumi_mask=lm,
         xi=xis,
     )
-    data = []
-    for (mur, muf), v in zip(xis, me):
-        data.append({"muf": muf, "mur": mur, "MaunaKea": v})
-    # top++
-    toppp = pd.read_csv("top++_sv.csv", index_col=0)
-    print("top++\n", "-" * 5, sep="")
-    print(toppp)
-    mk = pd.DataFrame.from_records(data)
-    print()
-    print("MaunaKea\n", "-" * 8, sep="")
-    print(mk)
-    diff = (mk["MaunaKea"] - toppp["top++"]) / toppp["top++"]
-    print()
-    print("rel. diff\n", "-" * 8, sep="")
-    print(diff)
+    # load top++
+    df = pd.read_csv("top++_sv.csv", index_col=0)
+    df["MaunaKea"] = me
+    df["rel. error"] = (df["MaunaKea"] - df["top++"]) / df["top++"]
+    print(df)
 
 
 def main() -> None:
     """CLI entry point"""
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="MaunaKea|top++|compare")
+    parser.add_argument("mode", help="MaunaKea|top++|compare|top++-sv|compare-sv")
     args = parser.parse_args()
 
     m: float = 172.5
     sqrt_s: float = 7e3
     mode: str = args.mode.strip().lower()
     pto: int = 2
-    ch: str = "gg"
+    ch: str = "qg"
     abs_xi: float = 2.0
     if mode == "maunakea":
         compute_mauna_kea(m, sqrt_s)
