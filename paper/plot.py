@@ -15,12 +15,28 @@ from run import LABELS, PDFS, grid_path
 TEX_LABELS = {3: r"c\bar{c}", 4: r"b\bar{b}"}
 
 
+PDF_SET_NAMES = {
+    3: [
+        "NNPDF40_nnlo_pch_as_01180_nf_3",
+        "MSHT20nnlo_nf3",
+        "ABMP16_3_nnlo",
+        "CT18NNLO_NF3",
+    ],
+    4: [
+        "NNPDF40_nnlo_as_01180_nf_4",
+        "MSHT20nnlo_nf4",
+        "ABMP16_4_nnlo",
+        "CT18NNLO_NF4",
+    ],
+}
+
+
 def extract_sv_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto: int
+    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto_: int
 ) -> pd.DataFrame:
     """Extract a given PTO together with its SV."""
     # compute central value
-    order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto, 0, True)
+    order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
     central = grid.convolute_with_one(
         2212, central_pdf.xfxQ2, central_pdf.alphasQ2, order_mask=order_mask
     )
@@ -56,16 +72,16 @@ def load_pto(nl: int) -> Mapping[int, pd.DataFrame]:
     dfs = {}
     for k in range(2 + 1):
         df = extract_sv_by_order(grid, central_pdf, k)
-        df.to_csv(f"{LABELS[nl]}-pto-{k}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-pto-{k}.csv")
         dfs[k] = df
     return dfs
 
 
 def extract_lumis_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto: int
+    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto_: int
 ) -> pd.DataFrame:
     """Extract lumi fraction for a given PTO."""
-    order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto, 0, True)
+    order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
     full = grid.convolute_with_one(
         2212, central_pdf.xfxQ2, central_pdf.alphasQ2, order_mask=order_mask
     )
@@ -96,7 +112,7 @@ def load_lumi(nl: int) -> Mapping[int, pd.DataFrame]:
     dfs = {}
     for k in range(2 + 1):
         df = extract_lumis_by_order(grid, central_pdf, k)
-        df.to_csv(f"{LABELS[nl]}-lumi-{k}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-lumi-{k}.csv")
         dfs[k] = df
     return dfs
 
@@ -113,8 +129,8 @@ def load_pdf(nl: int, pdf_sets: Collection[str]) -> Mapping[str, pd.DataFrame]:
         pdfs = pdf_set.mkPDFs()
         # compute PDF uncert
         pdf_vals = []
-        for pdf in pdfs:
-            pdf_vals.append(grid.convolute_with_one(2212, pdf.xfxQ2, pdf.alphasQ2))
+        for pdf_ in pdfs:
+            pdf_vals.append(grid.convolute_with_one(2212, pdf_.xfxQ2, pdf_.alphasQ2))
         pdf_vals = np.array(pdf_vals)
         df = pd.DataFrame()
         df["sqrt_s"] = grid.bin_left(0)
@@ -132,26 +148,10 @@ def load_pdf(nl: int, pdf_sets: Collection[str]) -> Mapping[str, pd.DataFrame]:
         df["central"] = list(map(lambda u: u.central, pdf_errs))
         df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
         df["pdf_plus"] = list(map(lambda u: u.central + u.errplus, pdf_errs))
-        df.to_csv(f"{LABELS[nl]}-pdf-{pdf_set_name}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-pdf-{pdf_set_name}.csv")
         dfs[pdf_set_name] = df
 
     return dfs
-
-
-PDF_SET_NAMES = {
-    3: [
-        "NNPDF40_nnlo_pch_as_01180_nf_3",
-        "MSHT20nnlo_nf3",
-        "ABMP16_3_nnlo",
-        "CT18NNLO_NF3",
-    ],
-    4: [
-        "NNPDF40_nnlo_as_01180_nf_4",
-        "MSHT20nnlo_nf4",
-        "ABMP16_4_nnlo",
-        "CT18NNLO_NF4",
-    ],
-}
 
 
 def pdf(nl: int) -> None:
@@ -185,6 +185,17 @@ def pdf(nl: int) -> None:
             df["sqrt_s"], df["pdf_plus"] / norm, df["pdf_minus"] / norm, alpha=0.4
         )
         axs[1].plot(df["sqrt_s"], df["central"] / norm)
+    axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
+    axs[1].set_ylabel(r"K factor")
+    axs[1].tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
     fig.tight_layout()
     fig.savefig(f"{LABELS[nl]}-pdf.pdf")
 
