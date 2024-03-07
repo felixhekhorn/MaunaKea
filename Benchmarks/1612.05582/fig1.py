@@ -21,7 +21,7 @@ def labels(nf: int, j: int) -> str:
     """Build label and grid path."""
     q = NAME[nf]
     lab = f"{q}{q}bar"
-    return lab, f"fig1-{lab}-{j}.pineappl.lz4", f"fig1-{lab}.pineappl.lz4"
+    return lab, f"single-grids/fig1-{lab}-{j}.pineappl.lz4", f"fig1-{lab}.pineappl.lz4"
 
 
 def compute(nl: int, ndata: int) -> None:
