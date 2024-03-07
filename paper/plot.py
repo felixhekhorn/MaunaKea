@@ -3,7 +3,6 @@
 import argparse
 import pathlib
 from collections.abc import Callable, Collection, Mapping
-from enum import Enum
 
 import lhapdf
 import matplotlib.pyplot as plt
@@ -165,11 +164,20 @@ def pdf_raw(
     pdf_set_names = PDF_SET_NAMES[nl]
     dfs = load_pdf(nl, pdf_set_names, f)
 
-    # plot
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True)
+    # plot nominal x_min
+    for j, pdf_set_name in enumerate(pdf_set_names):
+        xmin = lhapdf.getPDFSet(pdf_set_name).get_entry("XMin")
+        m2 = MASSES[nl]
+        for ax in axs:
+            ax.axvline(
+                x=_xmin2sqrts(m2, float(xmin)), c=f"C{j}", linestyle="--", alpha=0.3
+            )
+    # plot data
     for pdf_set, df in dfs.items():
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
         axs[0].plot(df["sqrt_s"], df["central"], label=pdf_set)
+        axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
     axs[0].set_ylabel(ylabel)
@@ -217,6 +225,14 @@ def pdf_obs(nl: int) -> None:
     )
 
 
+def _sqrts2xmin(m2, sqrt_s):
+    return 4.0 * m2 / np.power(sqrt_s, 2)
+
+
+def _xmin2sqrts(m2, xmin):
+    return np.sqrt(4.0 * m2 / xmin)
+
+
 def pdf_gluon(nl: int) -> None:
     """Plot gluon(x_min) dependence."""
 
@@ -229,12 +245,6 @@ def pdf_gluon(nl: int) -> None:
 
     m2 = MASSES[nl]
 
-    def _sqrts2xmin(sqrt_s):
-        return 4.0 * m2 / np.power(sqrt_s, 2)
-
-    def _xmin2sqrts(xmin):
-        return np.sqrt(4.0 * m2 / xmin)
-
     def fix_ax0(ax0):
         ax0.tick_params(
             "both",
@@ -245,8 +255,15 @@ def pdf_gluon(nl: int) -> None:
             left=True,
             right=True,
         )
-        secax = ax0.secondary_xaxis("top", functions=(_sqrts2xmin, _xmin2sqrts))
+        secax = ax0.secondary_xaxis(
+            "top",
+            functions=(
+                lambda sqrt_s: _sqrts2xmin(m2, sqrt_s),
+                lambda xmin: _xmin2sqrts(m2, xmin),
+            ),
+        )
         secax.set_xlabel(r"$x_{min}$")
+        secax.tick_params("x", which="both", direction="in")
 
     pdf_raw(nl, extract, r"$xg(x_{min})$", "gluon", fix_ax0)
 
