@@ -2,7 +2,8 @@
 
 import argparse
 import pathlib
-from collections.abc import Collection, Mapping
+from collections.abc import Callable, Collection, Mapping
+from enum import Enum
 
 import lhapdf
 import matplotlib.pyplot as plt
@@ -10,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pineappl
 
-from run import LABELS, PDFS, grid_path
+from run import LABELS, MASSES, PDFS, grid_path
 
 TEX_LABELS = {3: r"c\bar{c}", 4: r"b\bar{b}"}
 
@@ -117,7 +118,9 @@ def load_lumi(nl: int) -> Mapping[int, pd.DataFrame]:
     return dfs
 
 
-def load_pdf(nl: int, pdf_sets: Collection[str]) -> Mapping[str, pd.DataFrame]:
+def load_pdf(
+    nl: int, pdf_sets: Collection[str], f: Callable
+) -> Mapping[str, pd.DataFrame]:
     """Load PDF data."""
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(nl))
@@ -130,7 +133,7 @@ def load_pdf(nl: int, pdf_sets: Collection[str]) -> Mapping[str, pd.DataFrame]:
         # compute PDF uncert
         pdf_vals = []
         for pdf_ in pdfs:
-            pdf_vals.append(grid.convolute_with_one(2212, pdf_.xfxQ2, pdf_.alphasQ2))
+            pdf_vals.append(f(grid, pdf_))
         pdf_vals = np.array(pdf_vals)
         df = pd.DataFrame()
         df["sqrt_s"] = grid.bin_left(0)
@@ -154,11 +157,13 @@ def load_pdf(nl: int, pdf_sets: Collection[str]) -> Mapping[str, pd.DataFrame]:
     return dfs
 
 
-def pdf(nl: int) -> None:
+def pdf_raw(
+    nl: int, f: Callable, ylabel: str, suffix: str, fix_ax0: Callable = None
+) -> None:
     """Plot PDF dependence."""
     # prepare data
     pdf_set_names = PDF_SET_NAMES[nl]
-    dfs = load_pdf(nl, pdf_set_names)
+    dfs = load_pdf(nl, pdf_set_names, f)
 
     # plot
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True)
@@ -167,7 +172,7 @@ def pdf(nl: int) -> None:
         axs[0].plot(df["sqrt_s"], df["central"], label=pdf_set)
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
-    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    axs[0].set_ylabel(ylabel)
     axs[0].tick_params(
         "both",
         which="both",
@@ -178,6 +183,8 @@ def pdf(nl: int) -> None:
         right=True,
     )
     axs[0].legend()
+    if fix_ax0:
+        fix_ax0(axs[0])
     # rel. size
     norm = dfs[pdf_set_names[0]]["central"]
     for _, df in dfs.items():
@@ -186,7 +193,7 @@ def pdf(nl: int) -> None:
         )
         axs[1].plot(df["sqrt_s"], df["central"] / norm)
     axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
-    axs[1].set_ylabel(r"K factor")
+    axs[1].set_ylabel(r"rel. PDF unc.")
     axs[1].tick_params(
         "both",
         which="both",
@@ -197,7 +204,51 @@ def pdf(nl: int) -> None:
         right=True,
     )
     fig.tight_layout()
-    fig.savefig(f"{LABELS[nl]}-pdf.pdf")
+    fig.savefig(f"{LABELS[nl]}-{suffix}.pdf")
+
+
+def pdf_obs(nl: int) -> None:
+    """Plot PDF dependence."""
+    pdf_raw(
+        nl,
+        lambda grid, pdf_: grid.convolute_with_one(2212, pdf_.xfxQ2, pdf_.alphasQ2),
+        f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
+        "pdf",
+    )
+
+
+def pdf_gluon(nl: int) -> None:
+    """Plot gluon(x_min) dependence."""
+
+    def extract(grid, pdf_):
+        res = []
+        for b in range(len(grid.bin_left(0))):
+            sg = grid.subgrid(0, b, 0)
+            res.append(pdf_.xfxQ2(21, np.min(sg.x1_grid()), sg.mu2_grid()[0].fac))
+        return res
+
+    m2 = MASSES[nl]
+
+    def _sqrts2xmin(sqrt_s):
+        return 4.0 * m2 / np.power(sqrt_s, 2)
+
+    def _xmin2sqrts(xmin):
+        return np.sqrt(4.0 * m2 / xmin)
+
+    def fix_ax0(ax0):
+        ax0.tick_params(
+            "both",
+            which="both",
+            direction="in",
+            bottom=True,
+            top=False,
+            left=True,
+            right=True,
+        )
+        secax = ax0.secondary_xaxis("top", functions=(_sqrts2xmin, _xmin2sqrts))
+        secax.set_xlabel(r"$x_{min}$")
+
+    pdf_raw(nl, extract, r"$xg(x_{min})$", "gluon", fix_ax0)
 
 
 def pto(nl: int) -> None:
@@ -295,10 +346,14 @@ if __name__ == "__main__":
     parser.add_argument("--pto", help="Plot convergence of PTO.", action="store_true")
     parser.add_argument("--lumi", help="Plot lumi separation.", action="store_true")
     parser.add_argument("--pdf", help="Plot PDF dependence.", action="store_true")
+    parser.add_argument("--gluon", help="Plot gluon(x_min).", action="store_true")
     args = parser.parse_args()
+    nl = int(args.nl)
     if args.pto:
-        pto(int(args.nl))
+        pto(nl)
     if args.lumi:
-        lumi(int(args.nl))
+        lumi(nl)
     if args.pdf:
-        pdf(int(args.nl))
+        pdf_obs(nl)
+    if args.gluon:
+        pdf_gluon(nl)
