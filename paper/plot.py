@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pineappl
+from scipy.integrate import quad
 
 from run import LABELS, MASSES, PDFS, grid_path
 
@@ -225,12 +226,36 @@ def pdf_obs(nl: int) -> None:
     )
 
 
-def _sqrts2xmin(m2, sqrt_s):
+def _sqrts2xmin(m2: float, sqrt_s: float) -> float:
+    r"""Convert :math:`\sqrt s` to :math:`x_{min}`."""
     return 4.0 * m2 / np.power(sqrt_s, 2)
 
 
-def _xmin2sqrts(m2, xmin):
+def _xmin2sqrts(m2: float, xmin: float) -> float:
+    r"""Convert :math:`x_{min}` to :math:`\sqrt s`."""
     return np.sqrt(4.0 * m2 / xmin)
+
+
+def add_xmin(m2: float, ax0) -> None:
+    """Add x_min as second x-axis on top."""
+    ax0.tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=False,
+        left=True,
+        right=True,
+    )
+    secax = ax0.secondary_xaxis(
+        "top",
+        functions=(
+            lambda sqrt_s: _sqrts2xmin(m2, sqrt_s),
+            lambda xmin: _xmin2sqrts(m2, xmin),
+        ),
+    )
+    secax.set_xlabel(r"$x_{min}$")
+    secax.tick_params("x", which="both", direction="in")
 
 
 def pdf_gluon(nl: int) -> None:
@@ -245,27 +270,29 @@ def pdf_gluon(nl: int) -> None:
 
     m2 = MASSES[nl]
 
-    def fix_ax0(ax0):
-        ax0.tick_params(
-            "both",
-            which="both",
-            direction="in",
-            bottom=True,
-            top=False,
-            left=True,
-            right=True,
-        )
-        secax = ax0.secondary_xaxis(
-            "top",
-            functions=(
-                lambda sqrt_s: _sqrts2xmin(m2, sqrt_s),
-                lambda xmin: _xmin2sqrts(m2, xmin),
-            ),
-        )
-        secax.set_xlabel(r"$x_{min}$")
-        secax.tick_params("x", which="both", direction="in")
+    pdf_raw(nl, extract, r"$xg(x_{min})$", "gluon", lambda ax0: add_xmin(m2, ax0))
 
-    pdf_raw(nl, extract, r"$xg(x_{min})$", "gluon", fix_ax0)
+
+def pdf_gg(nl: int) -> None:
+    """Plot gg(x_min) dependence."""
+
+    def lumi_ker(z: float, pdf_, x, mu2):
+        return 1.0 / z * pdf_.xfxQ2(21, z, mu2) * pdf_.xfxQ2(21, x / z, mu2)
+
+    def pdf_lumi(pdf_, x, mu2):
+        i, _e = quad(lumi_ker, x, 1.0, args=(pdf_, x, mu2), limit=100)
+        return i
+
+    def extract(grid, pdf_):
+        res = []
+        for b in range(len(grid.bin_left(0))):
+            sg = grid.subgrid(0, b, 0)
+            res.append(pdf_lumi(pdf_, np.min(sg.x1_grid()), sg.mu2_grid()[0].fac))
+        return res
+
+    m2 = MASSES[nl]
+
+    pdf_raw(nl, extract, r"$x L_{gg}(x_{min})$", "gg", lambda ax0: add_xmin(m2, ax0))
 
 
 def pto(nl: int) -> None:
@@ -364,13 +391,14 @@ if __name__ == "__main__":
     parser.add_argument("--lumi", help="Plot lumi separation.", action="store_true")
     parser.add_argument("--pdf", help="Plot PDF dependence.", action="store_true")
     parser.add_argument("--gluon", help="Plot gluon(x_min).", action="store_true")
+    parser.add_argument("--gg", help="Plot gg(x_min).", action="store_true")
     args = parser.parse_args()
-    nl = int(args.nl)
+    nl_ = int(args.nl)
     if args.pto:
-        pto(nl)
+        pto(nl_)
     if args.lumi:
-        lumi(nl)
+        lumi(nl_)
     if args.pdf:
-        pdf_obs(nl)
-    if args.gluon:
-        pdf_gluon(nl)
+        pdf_obs(nl_)
+    if args.gg:
+        pdf_gg(nl_)
