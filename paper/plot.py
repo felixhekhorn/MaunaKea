@@ -102,18 +102,18 @@ def extract_lumis_by_order(
     return df
 
 
-def load_lumi(nl: int) -> Mapping[int, pd.DataFrame]:
+def load_lumi(nl: int, pdf_set: str) -> Mapping[int, pd.DataFrame]:
     """Load lumi data."""
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(nl))
     lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF(PDFS[nl], 0)
+    central_pdf = lhapdf.mkPDF(pdf_set, 0)
     grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
     for k in range(2 + 1):
         df = extract_lumis_by_order(grid, central_pdf, k)
-        df.to_csv(f"data/{LABELS[nl]}-lumi-{k}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-lumi-{pdf_set}-{k}.csv")
         dfs[k] = df
     return dfs
 
@@ -341,10 +341,10 @@ def pto(nl: int) -> None:
     fig.savefig(f"{LABELS[nl]}-pto.pdf")
 
 
-def lumi(nl: int) -> None:
+def lumi(nl: int, pdf_set: str) -> None:
     """Plot lumi separation."""
     # prepare data
-    dfs = load_lumi(nl)
+    dfs = load_lumi(nl, pdf_set)
 
     # plot
     fig, ax = plt.subplots(1, 1)
@@ -381,10 +381,11 @@ def lumi(nl: int) -> None:
     )
     ax.legend()
     fig.tight_layout()
-    fig.savefig(f"{LABELS[nl]}-lumi.pdf")
+    fig.savefig(f"{LABELS[nl]}-lumi-{pdf_set}.pdf")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """CLI entry point."""
     parser = argparse.ArgumentParser()
     parser.add_argument("nl", help="Number of light flavors.")
     parser.add_argument("--pto", help="Plot convergence of PTO.", action="store_true")
@@ -392,13 +393,27 @@ if __name__ == "__main__":
     parser.add_argument("--pdf", help="Plot PDF dependence.", action="store_true")
     parser.add_argument("--gluon", help="Plot gluon(x_min).", action="store_true")
     parser.add_argument("--gg", help="Plot gg(x_min).", action="store_true")
+    parser.add_argument(
+        "--iterate-pdf-sets", help="Iterate on PDF sets.", action="store_true"
+    )
+    parser.add_argument("--pdf-set", help="PDF set used for plots.")
     args = parser.parse_args()
     nl_ = int(args.nl)
+    pdf_sets = [PDFS[nl_]]
+    if args.iterate_pdf_sets:
+        pdf_sets = PDF_SET_NAMES[nl_]
+    if args.pdf_set:
+        pdf_sets = [args.pdf_set]
     if args.pto:
         pto(nl_)
     if args.lumi:
-        lumi(nl_)
+        for ps in pdf_sets:
+            lumi(nl_, ps)
     if args.pdf:
         pdf_obs(nl_)
     if args.gg:
         pdf_gg(nl_)
+
+
+if __name__ == "__main__":
+    main()
