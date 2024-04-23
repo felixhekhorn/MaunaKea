@@ -14,7 +14,7 @@ repos:
     rev: 0.8.0
     hooks:
     - id: clang-format         # formatter for C/C++ code based on a style guide
-      args: ["-style={BasedOnStyle: Google,ColumnLimit: 120}"]
+      args: ["-style={BasedOnStyle: Google,ColumnLimit: 120,SortIncludes: Never}"]
     - id: cpplint              # linter (or style-error checker) for Google C++ Style Guide
       args: ["--filter=-legal/copyright", "--linelength=120"]
   #   - id: cppcheck             # static analyzer for C/C++ code

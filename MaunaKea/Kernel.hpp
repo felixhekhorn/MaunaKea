@@ -4,8 +4,9 @@
 #include <memory>
 #include <vector>
 
+#include <PineAPPL.hpp>
+
 #include "./FO.hpp"
-#include "./PineAPPL.hpp"
 #include "./config.h"
 
 namespace MaunaKea {
