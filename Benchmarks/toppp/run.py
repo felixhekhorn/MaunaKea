@@ -10,16 +10,18 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 import MaunaKea
 
 GRID_PATH = pathlib.Path("toppp.pineappl.lz4")
-TOPPP_EXE = pathlib.Path(__file__).parents[3] / "top++2.0" / "top++"
+TOPPP_NF5_EXE = pathlib.Path(__file__).parents[3] / "top++2.0" / "top++"
+TOPPP_NF3_EXE = pathlib.Path(__file__).parents[3] / "top++2.0-c" / "top++"
 
 
-def compute_mauna_kea(m: float, sqrt_s: int) -> None:
+def compute_mauna_kea(nl: int, m: float, sqrt_s: int, pdf: str) -> None:
     """Compute MaunaKea numbers."""
     # init object
-    mk = MaunaKea.MaunaKea(m * m, 5, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
-    mk.intCfg.calls = 50000
+    mk = MaunaKea.MaunaKea(m * m, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
+    mk.intCfg.calls = 500000
+    mk.intCfg.verbosity = 3
     mk.setHadronicS(sqrt_s * sqrt_s)
-    mk.setPDF("NNPDF40_nnlo_as_01180", 0)
+    mk.setPDF(pdf, 0)
     # fill the grid
     mk.run()
     int_out = mk.getIntegrationOutput()
@@ -41,11 +43,20 @@ TOPPP_DEFAULT_VARS = {
     "use_nlo": False,
     "use_nnlo": False,
     "pc": "ALL",
+    "pdf": "NNPDF40_nnlo_as_01180",
 }
 
 
 def run_toppp(
-    n, m: float, sqrt_s: int, pto: int, ch: str = "ALL", murs=(1.0,), mufs=(1.0,)
+    n_output: int,
+    nl: int,
+    m: float,
+    sqrt_s: int,
+    pto: int,
+    pdf: str,
+    ch: str = "ALL",
+    murs=(1.0,),
+    mufs=(1.0,),
 ) -> None:
     """Run top++."""
     # prepare runcard
@@ -58,37 +69,46 @@ def run_toppp(
     v["mufs"] = mufs
     v["use_" + ("n" * pto) + "lo"] = True
     v["pc"] = ch
+    v["pdf"] = pdf
     p_in.write_text(TOPPP_CFG_TEMPLATE.render(**v), encoding="utf8")
     # run
-    subprocess.run([TOPPP_EXE, p_in], check=True)
+    if nl == 3:
+        exe = TOPPP_NF3_EXE
+    elif nl == 5:
+        exe = TOPPP_NF5_EXE
+    else:
+        raise ValueError(f"No executable for nl={nl}")
+    subprocess.run([exe, p_in], check=True)
     # read file
     p_out = pathlib.Path("top++.res")
     out = p_out.read_text(encoding="utf8").splitlines()
     # parse numbers
     res = []
-    for j in range(n):
+    for j in range(n_output):
         res.append(float(out[15 + j].split()[-1]))
     return res
 
 
-def compute_toppp(m: float, sqrt_s: int) -> None:
+def compute_toppp(nl: int, m: float, sqrt_s: int, pdf: str) -> None:
     """Compute top++ numbers."""
     labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     data = {}
     for ch in labs:
         res = []
         for pto in range(2 + 1):
-            res.append(run_toppp(1, m, sqrt_s, pto, ch)[0])
+            res.append(run_toppp(1, nl, m, sqrt_s, pto, pdf, ch)[0])
         data[ch] = res
     df = pd.DataFrame.from_records(data)
     df.to_csv("top++.csv")
 
 
-def compute_toppp_sv(m: float, sqrt_s: int, pto: int, ch: str, abs_xi: float) -> None:
+def compute_toppp_sv(
+    nl: int, m: float, sqrt_s: int, pto: int, pdf: str, ch: str, abs_xi: float
+) -> None:
     """Compute SV top++ numbers."""
     xis = [1.0 / abs_xi, 1.0, abs_xi]
     data = []
-    res = list(reversed(run_toppp(9, m, sqrt_s, pto, ch, murs=xis, mufs=xis)))
+    res = list(reversed(run_toppp(9, nl, m, sqrt_s, pto, pdf, ch, murs=xis, mufs=xis)))
     for muf in xis:
         for mur in xis:
             data.append(
@@ -98,13 +118,12 @@ def compute_toppp_sv(m: float, sqrt_s: int, pto: int, ch: str, abs_xi: float) ->
     df.to_csv("top++_sv.csv")
 
 
-def compare() -> None:
+def compare(pdf: str) -> None:
     """Compare numbers."""
     # MaunaKea
-    grid_path = pathlib.Path(GRID_PATH)
     lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF("NNPDF40_nnlo_as_01180", 0)
-    grid = pineappl.grid.Grid.read(grid_path)
+    central_pdf = lhapdf.mkPDF(pdf, 0)
+    grid = pineappl.grid.Grid.read(GRID_PATH)
     data = {}
     labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     for idx, ch in enumerate(labs):
@@ -140,12 +159,12 @@ def compare() -> None:
     print(diff)
 
 
-def compare_sv(pto: int, ch: str, abs_xi: float) -> None:
+def compare_sv(pto: int, pdf: str, ch: str, abs_xi: float) -> None:
     """Compare SV numbers."""
     # MaunaKea
     grid_path = pathlib.Path(GRID_PATH)
     lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF("NNPDF40_nnlo_as_01180", 0)
+    central_pdf = lhapdf.mkPDF(pdf, 0)
     grid = pineappl.grid.Grid.read(grid_path)
     labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     lm = [False] * len(labs)
@@ -179,24 +198,31 @@ def main() -> None:
     """CLI entry point"""
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", help="MaunaKea|top++|compare|top++-sv|compare-sv")
+    parser.add_argument("nl", help="number of light flavors")
     args = parser.parse_args()
 
+    nl: int = int(args.nl)
     m: float = 172.5
+    pdf = "NNPDF40_nnlo_as_01180"
+    if nl == 3:
+        m = 1.51
+        pdf = "NNPDF40_nlo_pch_as_01180_nf_3"
     sqrt_s: float = 7e3
     mode: str = args.mode.strip().lower()
     pto: int = 2
     ch: str = "qg"
     abs_xi: float = 2.0
+
     if mode == "maunakea":
-        compute_mauna_kea(m, sqrt_s)
+        compute_mauna_kea(nl, m, sqrt_s, pdf)
     elif mode == "top++":
-        compute_toppp(m, sqrt_s)
+        compute_toppp(nl, m, sqrt_s, pdf)
     elif mode == "top++-sv":
-        compute_toppp_sv(m, sqrt_s, pto, ch, abs_xi)
+        compute_toppp_sv(nl, m, sqrt_s, pto, pdf, ch, abs_xi)
     elif mode == "compare":
-        compare()
+        compare(pdf)
     elif mode == "compare-sv":
-        compare_sv(pto, ch, abs_xi)
+        compare_sv(pto, pdf, ch, abs_xi)
     else:
         raise ValueError("unkown mode")
 

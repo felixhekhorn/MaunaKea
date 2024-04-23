@@ -3,7 +3,7 @@ Collider LHC
 ECMLHC {{ sqrt_s }}
 WithResummation NO
 PDFuncertainty NO
-PDFset NNPDF40_nnlo_as_01180
+PDFset {{ pdf }}
 RestrictedScaleVariation {{ svrange }}
 /================================= mt(GeV); muF and muR (in units of mt)
 Mtop {{ m }}
