@@ -213,7 +213,7 @@ def pdf_raw(
         right=True,
     )
     fig.tight_layout()
-    fig.savefig(f"{LABELS[nl]}-{suffix}.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-{suffix}.pdf")
 
 
 def pdf_obs(nl: int) -> None:
@@ -338,7 +338,7 @@ def pto(nl: int) -> None:
     )
     axs[1].legend()
     fig.tight_layout()
-    fig.savefig(f"{LABELS[nl]}-pto.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-pto.pdf")
 
 
 def lumi(nl: int, pdf_set: str) -> None:
@@ -381,7 +381,7 @@ def lumi(nl: int, pdf_set: str) -> None:
     )
     ax.legend()
     fig.tight_layout()
-    fig.savefig(f"{LABELS[nl]}-lumi-{pdf_set}.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-lumi-{pdf_set}.pdf")
 
 
 def main() -> None:
