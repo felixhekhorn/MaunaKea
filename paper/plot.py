@@ -158,7 +158,7 @@ def load_pdf(
 
 
 def pdf_raw(
-    nl: int, f: Callable, ylabel: str, suffix: str, fix_ax0: Callable = None
+    nl: int, f: Callable, ylabel: str, suffix: str, update_ax0: Callable = None
 ) -> None:
     """Plot PDF dependence."""
     # prepare data
@@ -192,8 +192,8 @@ def pdf_raw(
         right=True,
     )
     axs[0].legend()
-    if fix_ax0:
-        fix_ax0(axs[0])
+    if update_ax0:
+        update_ax0(axs[0])
     # rel. size
     norm = dfs[pdf_set_names[0]]["central"]
     for _, df in dfs.items():
@@ -201,6 +201,7 @@ def pdf_raw(
             df["sqrt_s"], df["pdf_plus"] / norm, df["pdf_minus"] / norm, alpha=0.4
         )
         axs[1].plot(df["sqrt_s"], df["central"] / norm)
+    axs[1].set_ylim(-0.5, 2)
     axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
     axs[1].set_ylabel(r"rel. PDF unc.")
     axs[1].tick_params(
@@ -306,6 +307,7 @@ def pto(nl: int) -> None:
         df = dfs[k]
         axs[0].fill_between(df["sqrt_s"], df["sv_min"], df["sv_max"], alpha=0.4)
         axs[0].plot(df["sqrt_s"], df["central"], label=lab)
+        axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
     axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
@@ -325,6 +327,7 @@ def pto(nl: int) -> None:
         axs[1].plot(
             dfs[k1]["sqrt_s"], dfs[k1]["central"] / dfs[k2]["central"], label=lab
         )
+    axs[1].set_ylim(1.0, 4.0)
     axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
     axs[1].set_ylabel(r"K factor")
     axs[1].tick_params(
@@ -368,8 +371,11 @@ def lumi(nl: int, pdf_set: str) -> None:
                 color=f"C{lu}",
                 linestyle=ls,
             )
+        ax.set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+    ax.set_ylim(-25, 107)
     ax.set_xscale("log")
     ax.set_ylabel(r"$\sigma^{ij}/\sigma^{tot}$ [%]")
+    ax.set_xlabel(r"$\sqrt{s}$ [GeV]")
     ax.tick_params(
         "both",
         which="both",
@@ -387,12 +393,18 @@ def lumi(nl: int, pdf_set: str) -> None:
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("nl", help="Number of light flavors.")
-    parser.add_argument("--pto", help="Plot convergence of PTO.", action="store_true")
-    parser.add_argument("--lumi", help="Plot lumi separation.", action="store_true")
-    parser.add_argument("--pdf", help="Plot PDF dependence.", action="store_true")
-    parser.add_argument("--gluon", help="Plot gluon(x_min).", action="store_true")
-    parser.add_argument("--gg", help="Plot gg(x_min).", action="store_true")
+    parser.add_argument("nl", help="Number of light flavors")
+    h_pto = "Plot convergence with PTO"
+    parser.add_argument("--pto", help=h_pto, action="store_true")
+    h_lumi = "Plot lumi separation"
+    parser.add_argument("--lumi", help=h_lumi, action="store_true")
+    h_pdf = "Plot PDF dependence"
+    parser.add_argument("--pdf", help=h_pdf, action="store_true")
+    h_gluon = "Plot gluon(x_min)"
+    parser.add_argument("--gluon", help=h_gluon, action="store_true")
+    h_gg = "Plot gg(x_min)"
+    parser.add_argument("--gg", help=h_gg, action="store_true")
+    parser.add_argument("--all", help="Plot everything", action="store_true")
     parser.add_argument(
         "--iterate-pdf-sets", help="Iterate on PDF sets.", action="store_true"
     )
@@ -404,14 +416,21 @@ def main() -> None:
         pdf_sets = PDF_SET_NAMES[nl_]
     if args.pdf_set:
         pdf_sets = [args.pdf_set]
-    if args.pto:
+    if args.pto or args.all:
+        print(h_pto)
         pto(nl_)
-    if args.lumi:
+    if args.lumi or args.all:
+        print(h_lumi)
         for ps in pdf_sets:
             lumi(nl_, ps)
-    if args.pdf:
+    if args.pdf or args.all:
+        print(h_pdf)
         pdf_obs(nl_)
-    if args.gg:
+    if args.gluon or args.all:
+        print(h_gluon)
+        pdf_gluon(nl_)
+    if args.gg or args.all:
+        print(h_gg)
         pdf_gg(nl_)
 
 
