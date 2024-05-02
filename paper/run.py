@@ -19,7 +19,7 @@ SH_MAX: float = 400e3**2
 PDFS = {3: "NNPDF40_nnlo_pch_as_01180_nf_3", 4: "NNPDF40_nnlo_as_01180_nf_4"}
 
 
-def sub_grid_path(nf: int, j: int) -> str:
+def subgrid_path(nf: int, j: int) -> str:
     """Return grid path for single configuration."""
     return f"subgrids/{LABELS[nf]}-{j}.pineappl.lz4"
 
@@ -57,7 +57,7 @@ def compute_subgrid(j: int, ndata: int, nl: int, sh: float) -> None:
     start = time.perf_counter()
     # init object
     mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
-    mk.intCfg.calls = 5000
+    mk.intCfg.calls = 50000
     mk.setHadronicS(sh)
     mk.setPDF(PDFS[nl], 0)
     mk.setCentralScaleRatio(2.0)
@@ -68,7 +68,7 @@ def compute_subgrid(j: int, ndata: int, nl: int, sh: float) -> None:
     print(f"sigma_tot = {int_out.result:e} +- {int_out.error:e} [pb]")
     print(f"took {delta:.2f} s and chi2iter={int_out.chi2iter}")
     # save
-    mk.write(sub_grid_path(nl, j))
+    mk.write(subgrid_path(nl, j))
 
 
 def merge(nl: int, ndata: int) -> None:
@@ -76,8 +76,8 @@ def merge(nl: int, ndata: int) -> None:
     # merge grids according to their c.o.m. energy
     base = None
     for j in range(ndata):
-        sub_grid_path_ = pathlib.Path(sub_grid_path(nl, j))
-        grid = pineappl.grid.Grid.read(sub_grid_path_)
+        subgrid_path_ = pathlib.Path(subgrid_path(nl, j))
+        grid = pineappl.grid.Grid.read(subgrid_path_)
         # rebin by S_h
         sqrt_sh = np.sqrt(float(grid.key_values()["MaunaKea/hadronicS"]))
         print(f"Merging j={j} with √S_h={sqrt_sh} GeV")
@@ -108,7 +108,9 @@ if __name__ == "__main__":
     parser.add_argument("ndata", help="Number of points")
     parser.add_argument("-c", "--compute", help="Compute grids", action="store_true")
     parser.add_argument("-m", "--merge", help="Merge grids", action="store_true")
-    parser.add_argument("--processes", default=-1, help="Number of parallel threads")
+    parser.add_argument(
+        "--processes", default=-1, help="Number of parallel threads for computing"
+    )
     args = parser.parse_args()
     if args.compute:
         compute(int(args.nl), int(args.ndata), int(args.processes))

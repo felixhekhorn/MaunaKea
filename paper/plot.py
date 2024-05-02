@@ -406,9 +406,9 @@ def main() -> None:
     parser.add_argument("--gg", help=h_gg, action="store_true")
     parser.add_argument("--all", help="Plot everything", action="store_true")
     parser.add_argument(
-        "--iterate-pdf-sets", help="Iterate on PDF sets.", action="store_true"
+        "--iterate-pdf-sets", help="Iterate on PDF sets", action="store_true"
     )
-    parser.add_argument("--pdf-set", help="PDF set used for plots.")
+    parser.add_argument("--pdf-set", help="PDF set used for plots")
     args = parser.parse_args()
     nl_ = int(args.nl)
     pdf_sets = [PDFS[nl_]]
@@ -422,6 +422,7 @@ def main() -> None:
     if args.lumi or args.all:
         print(h_lumi)
         for ps in pdf_sets:
+            print("-", ps)
             lumi(nl_, ps)
     if args.pdf or args.all:
         print(h_pdf)
