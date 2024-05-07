@@ -5,6 +5,7 @@ import pathlib
 from collections.abc import Callable, Collection, Mapping
 
 import lhapdf
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -30,6 +31,12 @@ PDF_SET_NAMES = {
         "CT18NNLO_NF4",
     ],
 }
+
+
+# Set the default color cycle
+mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
+    color=["#001D66", "#B01C64", "#FFBF33", "#3D2E85", "#FF6000", "#FFF180"]
+)
 
 
 def extract_sv_by_order(
