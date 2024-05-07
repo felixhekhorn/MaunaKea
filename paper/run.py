@@ -15,6 +15,7 @@ import MaunaKea
 LABELS = {3: "ccbar", 4: "bbbar"}
 SH_MIN: float = 20.0**2
 SH_MAX: float = 400e3**2
+CALLS: int = 50000
 # setup default PDFs
 PDFS = {
     3: {
@@ -43,7 +44,9 @@ def grid_path(m2: float, nf: int) -> str:
     return f"{LABELS[nf]}-{m2:.2f}.pineappl.lz4"
 
 
-def compute(ndata: int, m2: float, nl: int, pdf: str, processes: int = -1) -> None:
+def compute(
+    ndata: int, m2: float, nl: int, pdf: str, processes: int = -1, quick: bool = False
+) -> None:
     """Compute grids."""
     if processes <= 0:
         processes = max(os.cpu_count() + processes, 1)
@@ -59,6 +62,7 @@ def compute(ndata: int, m2: float, nl: int, pdf: str, processes: int = -1) -> No
                 [nl] * ndata,
                 np.geomspace(SH_MIN, SH_MAX, ndata),
                 [pdf] * ndata,
+                [quick] * ndata,
             ),
         )
     delta = time.perf_counter() - start
@@ -67,7 +71,7 @@ def compute(ndata: int, m2: float, nl: int, pdf: str, processes: int = -1) -> No
 
 
 def compute_subgrid(
-    j: int, ndata: int, m2: float, nl: int, sh: float, pdf: str
+    j: int, ndata: int, m2: float, nl: int, sh: float, pdf: str, quick: bool
 ) -> None:
     """Compute a subgrid."""
     print(f"j = {j:d}/{ndata:d}, S = {sh:e} GeV^2")
@@ -75,7 +79,7 @@ def compute_subgrid(
     start = time.perf_counter()
     # init object
     mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
-    mk.intCfg.calls = 50000
+    mk.intCfg.calls = 5000 if quick else CALLS
     mk.setHadronicS(sh)
     mk.setPDF(pdf)
     mk.setCentralScaleRatio(2.0)
@@ -132,6 +136,7 @@ def cli() -> None:
     parser.add_argument(
         "--processes", default=-1, help="Number of parallel threads for computing"
     )
+    parser.add_argument("--quick", help="Use low statistics", action="store_true")
     # prepare args
     args = parser.parse_args()
     m2_: float = float(args.m2)
@@ -146,7 +151,7 @@ def cli() -> None:
         raise ValueError("No PDF set given!")
     # do something
     if args.compute:
-        compute(int(args.ndata), m2_, nl_, pdf_, int(args.processes))
+        compute(int(args.ndata), m2_, nl_, pdf_, int(args.processes), bool(args.quick))
     if args.merge:
         merge(int(args.ndata), m2_, nl_)
 
