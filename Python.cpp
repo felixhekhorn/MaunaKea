@@ -47,7 +47,8 @@ PYBIND11_MODULE(MaunaKea, m) {
            py::doc("Set renormalization and factorization scale ratios xi_{R/F} = mu_{R/F}/m"))
       .def("setCentralScaleRatio", &MaunaKea::MaunaKea::setCentralScaleRatio,
            py::doc("Set grid central scale ratio xi = mu/m"))
-      .def("setPDF", &MaunaKea::MaunaKea::setPDF, py::doc("Set reference PDF"))
+      .def("setPDF", py::overload_cast<const str&, cuint>(&MaunaKea::MaunaKea::setPDF), py::doc("Set reference PDF"))
+      .def("setPDF", py::overload_cast<const str&>(&MaunaKea::MaunaKea::setPDF), py::doc("Set reference PDF"))
       .def("run", &MaunaKea::MaunaKea::run, py::doc("Run calculation"))
       .def("write", &MaunaKea::MaunaKea::write, py::doc("Write grid to disk"))
       .def("getIntegrationOutput", &MaunaKea::MaunaKea::getIntegrationOutput,

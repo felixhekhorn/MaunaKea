@@ -54,7 +54,13 @@ class MaunaKea {
    * @param setname PDF set name
    * @param member PDF member
    */
-  void setPDF(const str setname, cuint member) { this->k.setPDF(setname, member); }
+  void setPDF(const str& setname, cuint member) { this->k.setPDF(setname, member); }
+
+  /**
+   * @brief Set reference PDF
+   * @param setname PDF set name and member separated by /
+   */
+  void setPDF(const str& setname_nmem) { this->k.setPDF(setname_nmem); }
 
   /** @brief Run calculation */
   void run() {
@@ -78,7 +84,7 @@ class MaunaKea {
    * @brief Write grid to disk
    * @param fp file path
    */
-  void write(const str fp) const { this->k.writeGrid(fp); }
+  void write(const str& fp) const { this->k.writeGrid(fp); }
 
   /**
    * @brief Copy of current integration output

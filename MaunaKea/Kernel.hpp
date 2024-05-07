@@ -240,7 +240,7 @@ class Kernel : public HepSource::Integrand {
    * @param m coefficient functions
    * @return contribution to integral
    */
-  dbl fillLumi(cdbl flux, cuint idx_lumi, const FixedOrder::CoeffMap m) const {
+  dbl fillLumi(cdbl flux, cuint idx_lumi, const FixedOrder::CoeffMap& m) const {
     dbl tot = 0.;
     // LO
     if ((this->order_mask & ORDER_LO) == ORDER_LO) {
@@ -314,6 +314,15 @@ class Kernel : public HepSource::Integrand {
     this->as = this->pdf->alphasQ2(muR2);
   }
 
+  /**
+   * @brief Set reference PDF (and alpha_s)
+   * @param pdf PDF
+   */
+  void resetPDF(LHAPDF::PDF* pdf) {
+    this->pdf.reset(pdf);
+    this->setAlphaS();
+  }
+
  public:
   /**
    * @brief Constructor
@@ -373,10 +382,13 @@ class Kernel : public HepSource::Integrand {
    * @param setname PDF set name
    * @param member PDF member
    */
-  void setPDF(const str setname, cuint member) {
-    this->pdf.reset(LHAPDF::mkPDF(setname, member));
-    this->setAlphaS();
-  }
+  void setPDF(const str& setname, cuint member) { this->resetPDF(LHAPDF::mkPDF(setname, member)); }
+
+  /**
+   * @brief Set reference PDF (and alpha_s)
+   * @param setname PDF set name and member separated by /
+   */
+  void setPDF(const str& setname_nmem) { this->resetPDF(LHAPDF::mkPDF(setname_nmem)); }
 
   /**
    * @brief was a PDF set?
@@ -516,13 +528,11 @@ class Kernel : public HepSource::Integrand {
   void addScopedMetadata(str key, str value) const {
 #define kKernelKeyStrSize 100
     char buffer[kKernelKeyStrSize];
-    snprintf(buffer, kKernelKeyStrSize, "MaunaKea/%s", key.c_str());
+    snprintf(buffer, kKernelKeyStrSize, "MaunaKea::%s", key.c_str());
     this->grid->set_key_value(buffer, value);
   }
 
-  /**
-   * @brief add local metadata to grid
-   */
+  /** @brief add local metadata to grid */
   void addLocalMetadata() const {
 #define kKernelValStrSize 100
     char buffer[kKernelValStrSize];
@@ -542,7 +552,7 @@ class Kernel : public HepSource::Integrand {
     this->addScopedMetadata("xiR", buffer);
     snprintf(buffer, kKernelValStrSize, "%e", this->xiF);
     this->addScopedMetadata("xiF", buffer);
-    snprintf(buffer, kKernelValStrSize, "%s#%d", this->pdf->set().name().c_str(), this->pdf->memberID());
+    snprintf(buffer, kKernelValStrSize, "%s/%d", this->pdf->set().name().c_str(), this->pdf->memberID());
     this->addScopedMetadata("PDF", buffer);
     this->grid->set_key_value("y_label", "sigma_tot");
     this->grid->set_key_value("y_label_tex", "\\sigma_{tot}");
@@ -553,7 +563,7 @@ class Kernel : public HepSource::Integrand {
    * @brief Write grid to disk
    * @param fp file path
    */
-  void writeGrid(const str fp) const { this->grid->write(fp); }
+  void writeGrid(const str& fp) const { this->grid->write(fp); }
 
   /** @see MC initializer */
   void Dvegas_init() const { this->grid->scale(0.); }
