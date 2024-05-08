@@ -3,6 +3,7 @@
 import argparse
 import pathlib
 from collections.abc import Callable, Collection, Mapping
+from typing import Tuple
 
 import lhapdf
 import matplotlib as mpl
@@ -12,7 +13,7 @@ import pandas as pd
 import pineappl
 from scipy.integrate import quad
 
-from run import LABELS, grid_path
+from run import LABELS, PDFS, grid_path
 
 TEX_LABELS = {3: r"c\bar{c}", 4: r"b\bar{b}"}
 
@@ -69,18 +70,18 @@ def extract_sv_by_order(
     return df
 
 
-def load_pto(nl: int) -> Mapping[int, pd.DataFrame]:
+def load_pto(m2: float, nl: int, pdf: str) -> Mapping[int, pd.DataFrame]:
     """Load PTO data."""
     # prepare objects
-    grid_path_ = pathlib.Path(grid_path(nl))
+    grid_path_ = pathlib.Path(grid_path(m2, nl))
     lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF(PDFS[nl], 0)
+    central_pdf = lhapdf.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
     for k in range(2 + 1):
         df = extract_sv_by_order(grid, central_pdf, k)
-        df.to_csv(f"data/{LABELS[nl]}-pto-{k}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-pto-{k}.csv")
         dfs[k] = df
     return dfs
 
@@ -214,13 +215,10 @@ def pdf_raw(
     fig.savefig(f"plots/{output}")
 
 
-def pdf_obs(m2: float, nl: int) -> None:
-    """Plot PDF dependence."""
+def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
+    """Collect default settings."""
     elems = []
-    mass_label = ""
-    # setup data points
     if m2 > 0.0:  # use a fixed mass
-        mass_label = f"{m2:.2f}-"
         if nl == 3:
             elems = [
                 (
@@ -248,6 +246,13 @@ def pdf_obs(m2: float, nl: int) -> None:
                 (4.92, ["NNPDF40_nnlo_as_01180_nf_4"]),
                 (4.75, ["MSHT20nnlo_nf4", "CT18NNLO_NF4"]),
             ]
+    return elems
+
+
+def pdf_obs(m2: float, nl: int) -> None:
+    """Plot PDF dependence."""
+    elems = to_elems(m2, nl)
+    mass_label = f"{m2:.2f}-" if m2 > 0.0 else ""
 
     # plot the actual predictions
     def conv(grid, pdf_):
@@ -337,10 +342,10 @@ def pdf_gg(nl: int) -> None:
     pdf_raw(nl, extract, r"$x L_{gg}(x_{min})$", "gg", lambda ax0: add_xmin(m2, ax0))
 
 
-def pto(nl: int) -> None:
+def pto(m2: float, nl: int, pdf: str) -> None:
     """Plot convergence of PTO."""
     # prepare data
-    dfs = load_pto(nl)
+    dfs = load_pto(m2, nl, pdf)
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
@@ -382,7 +387,7 @@ def pto(nl: int) -> None:
     )
     axs[1].legend()
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-pto.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto.pdf")
 
 
 def lumi(nl: int, pdf_set: str) -> None:
@@ -461,7 +466,12 @@ def main() -> None:
         pdf_sets = [args.pdf_set]
     if args.pto or args.all:
         print(h_pto)
-        pto(nl_)
+        if m2_ > 0:
+            pdf = PDFS[nl_][f"{m2_:.2f}"]
+        else:
+            m2_, pdf = to_elems(m2_, nl_)[0]
+            pdf = pdf[0]
+        pto(m2_, nl_, pdf)
     if args.lumi or args.all:
         print(h_lumi)
         for ps in pdf_sets:
