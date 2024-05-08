@@ -12,7 +12,7 @@ import pandas as pd
 import pineappl
 from scipy.integrate import quad
 
-from run import LABELS, MASSES, PDFS, grid_path
+from run import LABELS, grid_path
 
 TEX_LABELS = {3: r"c\bar{c}", 4: r"b\bar{b}"}
 
@@ -126,11 +126,11 @@ def load_lumi(nl: int, pdf_set: str) -> Mapping[int, pd.DataFrame]:
 
 
 def load_pdf(
-    nl: int, pdf_sets: Collection[str], f: Callable
+    m2: float, nl: int, pdf_sets: Collection[str], f: Callable
 ) -> Mapping[str, pd.DataFrame]:
-    """Load PDF data."""
+    """Load PDF data from a grid."""
     # prepare objects
-    grid_path_ = pathlib.Path(grid_path(nl))
+    grid_path_ = pathlib.Path(grid_path(m2, nl))
     grid = pineappl.grid.Grid.read(grid_path_)
     lhapdf.setVerbosity(0)
     dfs = {}
@@ -149,38 +149,28 @@ def load_pdf(
             df["central"] = pdf_vals[0]
             df["pdf_minus"] = pdf_vals[0]
             df["pdf_plus"] = pdf_vals[0]
-            dfs[pdf_set_name] = df
-            continue
-        # else use lhapdf to do the math
-        pdf_errs = []
-        for obs in pdf_vals.T:
-            pdf_errs.append(pdf_set.uncertainty(obs))
-        df["central"] = list(map(lambda u: u.central, pdf_errs))
-        df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
-        df["pdf_plus"] = list(map(lambda u: u.central + u.errplus, pdf_errs))
-        df.to_csv(f"data/{LABELS[nl]}-pdf-{pdf_set_name}.csv")
+        else:  # use lhapdf to do the uncertainty math
+            pdf_errs = []
+            for obs in pdf_vals.T:
+                pdf_errs.append(pdf_set.uncertainty(obs))
+            df["central"] = list(map(lambda u: u.central, pdf_errs))
+            df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
+            df["pdf_plus"] = list(map(lambda u: u.central + u.errplus, pdf_errs))
+        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf_set_name}-pdf.csv")
         dfs[pdf_set_name] = df
 
     return dfs
 
 
 def pdf_raw(
-    nl: int, f: Callable, ylabel: str, suffix: str, update_ax0: Callable = None
+    output: str,
+    dfs: Mapping[str, pd.DataFrame],
+    ylabel: str,
+    update_ax0: Callable = None,
 ) -> None:
     """Plot PDF dependence."""
-    # prepare data
-    pdf_set_names = PDF_SET_NAMES[nl]
-    dfs = load_pdf(nl, pdf_set_names, f)
-
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True)
     # plot nominal x_min
-    for j, pdf_set_name in enumerate(pdf_set_names):
-        xmin = lhapdf.getPDFSet(pdf_set_name).get_entry("XMin")
-        m2 = MASSES[nl]
-        for ax in axs:
-            ax.axvline(
-                x=_xmin2sqrts(m2, float(xmin)), c=f"C{j}", linestyle="--", alpha=0.3
-            )
     # plot data
     for pdf_set, df in dfs.items():
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
@@ -202,7 +192,7 @@ def pdf_raw(
     if update_ax0:
         update_ax0(axs[0])
     # rel. size
-    norm = dfs[pdf_set_names[0]]["central"]
+    norm = list(dfs.values())[0]["central"]
     for _, df in dfs.items():
         axs[1].fill_between(
             df["sqrt_s"], df["pdf_plus"] / norm, df["pdf_minus"] / norm, alpha=0.4
@@ -221,16 +211,60 @@ def pdf_raw(
         right=True,
     )
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-{suffix}.pdf")
+    fig.savefig(f"plots/{output}")
 
 
-def pdf_obs(nl: int) -> None:
+def pdf_obs(m2: float, nl: int) -> None:
     """Plot PDF dependence."""
+    elems = []
+    mass_label = ""
+    # setup data points
+    if m2 > 0.0:  # use a fixed mass
+        mass_label = f"{m2:.2f}-"
+        if nl == 3:
+            elems = [
+                (
+                    m2,
+                    [
+                        "NNPDF40_nnlo_pch_as_01180_nf_3",
+                        "MSHT20nnlo_nf3",
+                        "CT18NNLO_NF3",
+                    ],
+                )
+            ]
+        elif nl == 4:
+            elems = [
+                (m2, ["NNPDF40_nnlo_as_01180_nf_4", "MSHT20nnlo_nf4", "CT18NNLO_NF4"])
+            ]
+    else:  # use "dynamic" mass
+        if nl == 3:
+            elems = [
+                (1.51, ["NNPDF40_nnlo_pch_as_01180_nf_3"]),
+                (1.4, ["MSHT20nnlo_nf3"]),
+                (1.3, ["CT18NNLO_NF3"]),
+            ]
+        elif nl == 4:
+            elems = [
+                (4.92, ["NNPDF40_nnlo_as_01180_nf_4"]),
+                (4.75, ["MSHT20nnlo_nf4", "CT18NNLO_NF4"]),
+            ]
+
+    # plot the actual predictions
+    def conv(grid, pdf_):
+        return grid.convolute_with_one(2212, pdf_.xfxQ2, pdf_.alphasQ2)
+
+    # collect datapoints
+    dfs = {}
+    for actual_m2_, pdfs in elems:
+        for pdf, df in load_pdf(actual_m2_, nl, pdfs, conv).items():
+            # relabel if necessary
+            new_label = pdf if m2 > 0.0 else f"{pdf} $m_c={actual_m2_:.2f}$ GeV"
+            dfs[new_label] = df
+    output = f"{LABELS[nl]}-{mass_label}pdf.pdf"
     pdf_raw(
-        nl,
-        lambda grid, pdf_: grid.convolute_with_one(2212, pdf_.xfxQ2, pdf_.alphasQ2),
+        output,
+        dfs,
         f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
-        "pdf",
     )
 
 
@@ -400,6 +434,7 @@ def lumi(nl: int, pdf_set: str) -> None:
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser()
+    parser.add_argument("m2", help="Mass of heavy quark")
     parser.add_argument("nl", help="Number of light flavors")
     h_pto = "Plot convergence with PTO"
     parser.add_argument("--pto", help=h_pto, action="store_true")
@@ -417,8 +452,9 @@ def main() -> None:
     )
     parser.add_argument("--pdf-set", help="PDF set used for plots")
     args = parser.parse_args()
-    nl_ = int(args.nl)
-    pdf_sets = [PDFS[nl_]]
+    m2_: float = float(args.m2)
+    nl_: int = int(args.nl)
+    pdf_sets = []
     if args.iterate_pdf_sets:
         pdf_sets = PDF_SET_NAMES[nl_]
     if args.pdf_set:
@@ -433,7 +469,7 @@ def main() -> None:
             lumi(nl_, ps)
     if args.pdf or args.all:
         print(h_pdf)
-        pdf_obs(nl_)
+        pdf_obs(m2_, nl_)
     if args.gluon or args.all:
         print(h_gluon)
         pdf_gluon(nl_)
