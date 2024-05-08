@@ -110,18 +110,18 @@ def extract_lumis_by_order(
     return df
 
 
-def load_lumi(nl: int, pdf_set: str) -> Mapping[int, pd.DataFrame]:
+def load_lumi(m2: float, nl: int, pdf: str) -> Mapping[int, pd.DataFrame]:
     """Load lumi data."""
     # prepare objects
-    grid_path_ = pathlib.Path(grid_path(nl))
+    grid_path_ = pathlib.Path(grid_path(m2, nl))
     lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF(pdf_set, 0)
+    central_pdf = lhapdf.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
     for k in range(2 + 1):
         df = extract_lumis_by_order(grid, central_pdf, k)
-        df.to_csv(f"data/{LABELS[nl]}-lumi-{pdf_set}-{k}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi-{k}.csv")
         dfs[k] = df
     return dfs
 
@@ -390,10 +390,10 @@ def pto(m2: float, nl: int, pdf: str) -> None:
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto.pdf")
 
 
-def lumi(nl: int, pdf_set: str) -> None:
+def lumi(m2: float, nl: int, pdf: str) -> None:
     """Plot lumi separation."""
     # prepare data
-    dfs = load_lumi(nl, pdf_set)
+    dfs = load_lumi(m2, nl, pdf)
 
     # plot
     fig, ax = plt.subplots(1, 1)
@@ -433,7 +433,7 @@ def lumi(nl: int, pdf_set: str) -> None:
     )
     ax.legend()
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-lumi-{pdf_set}.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi.pdf")
 
 
 def main() -> None:
@@ -452,31 +452,31 @@ def main() -> None:
     h_gg = "Plot gg(x_min)"
     parser.add_argument("--gg", help=h_gg, action="store_true")
     parser.add_argument("--all", help="Plot everything", action="store_true")
-    parser.add_argument(
-        "--iterate-pdf-sets", help="Iterate on PDF sets", action="store_true"
-    )
-    parser.add_argument("--pdf-set", help="PDF set used for plots")
+    # parser.add_argument(
+    #     "--iterate-pdf-sets", help="Iterate on PDF sets", action="store_true"
+    # )
+    parser.add_argument("--pdf_set", help="PDF used for plots")
     args = parser.parse_args()
     m2_: float = float(args.m2)
     nl_: int = int(args.nl)
-    pdf_sets = []
-    if args.iterate_pdf_sets:
-        pdf_sets = PDF_SET_NAMES[nl_]
+    # pdf_sets = []
+    # if args.iterate_pdf_sets:
+    #     pdf_sets = PDF_SET_NAMES[nl_]
+    if m2_ > 0:
+        pdf = PDFS[nl_][f"{m2_:.2f}"]
+    else:
+        m2_, pdf = to_elems(m2_, nl_)[0]
+        pdf = pdf[0]
     if args.pdf_set:
-        pdf_sets = [args.pdf_set]
+        pdf = [args.pdf_set]
+    # single PDF plots
     if args.pto or args.all:
         print(h_pto)
-        if m2_ > 0:
-            pdf = PDFS[nl_][f"{m2_:.2f}"]
-        else:
-            m2_, pdf = to_elems(m2_, nl_)[0]
-            pdf = pdf[0]
         pto(m2_, nl_, pdf)
     if args.lumi or args.all:
         print(h_lumi)
-        for ps in pdf_sets:
-            print("-", ps)
-            lumi(nl_, ps)
+        lumi(m2_, nl_, pdf)
+    # multi PDF plots
     if args.pdf or args.all:
         print(h_pdf)
         pdf_obs(m2_, nl_)
