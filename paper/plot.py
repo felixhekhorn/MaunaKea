@@ -127,7 +127,7 @@ def load_lumi(m2: float, nl: int, pdf: str) -> Mapping[int, pd.DataFrame]:
 
 
 def load_pdf(
-    m2: float, nl: int, pdf_sets: Collection[str], f: Callable
+    m2: float, nl: int, pdf_sets: Collection[str], suffix: str, f: Callable
 ) -> Mapping[str, pd.DataFrame]:
     """Load PDF data from a grid."""
     # prepare objects
@@ -157,19 +157,34 @@ def load_pdf(
             df["central"] = list(map(lambda u: u.central, pdf_errs))
             df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
             df["pdf_plus"] = list(map(lambda u: u.central + u.errplus, pdf_errs))
-        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf_set_name}-pdf.csv")
+        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf_set_name}-{suffix}.csv")
         dfs[pdf_set_name] = df
 
     return dfs
 
 
 def pdf_raw(
-    output: str,
-    dfs: Mapping[str, pd.DataFrame],
+    m2: float,
+    nl: int,
+    suffix: str,
+    f: Callable,
     ylabel: str,
     update_ax0: Callable = None,
 ) -> None:
     """Plot PDF dependence."""
+    # load data
+    elems = to_elems(m2, nl)
+    mass_label = f"{m2:.2f}-" if m2 > 0.0 else ""
+
+    # collect datapoints
+    dfs = {}
+    for actual_m2_, pdfs in elems:
+        for pdf, df in load_pdf(actual_m2_, nl, pdfs, suffix, f).items():
+            # relabel if necessary
+            new_label = pdf if m2 > 0.0 else f"{pdf} $m_c={actual_m2_:.2f}$ GeV"
+            dfs[new_label] = df
+    output = f"{LABELS[nl]}-{mass_label}{suffix}.pdf"
+
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True)
     # plot nominal x_min
     # plot data
@@ -251,24 +266,16 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
 
 def pdf_obs(m2: float, nl: int) -> None:
     """Plot PDF dependence."""
-    elems = to_elems(m2, nl)
-    mass_label = f"{m2:.2f}-" if m2 > 0.0 else ""
 
     # plot the actual predictions
     def conv(grid, pdf_):
         return grid.convolute_with_one(2212, pdf_.xfxQ2, pdf_.alphasQ2)
 
-    # collect datapoints
-    dfs = {}
-    for actual_m2_, pdfs in elems:
-        for pdf, df in load_pdf(actual_m2_, nl, pdfs, conv).items():
-            # relabel if necessary
-            new_label = pdf if m2 > 0.0 else f"{pdf} $m_c={actual_m2_:.2f}$ GeV"
-            dfs[new_label] = df
-    output = f"{LABELS[nl]}-{mass_label}pdf.pdf"
     pdf_raw(
-        output,
-        dfs,
+        m2,
+        nl,
+        "pdf",
+        conv,
         f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
     )
 
@@ -305,7 +312,7 @@ def add_xmin(m2: float, ax0) -> None:
     secax.tick_params("x", which="both", direction="in")
 
 
-def pdf_gluon(nl: int) -> None:
+def pdf_gluon(m2: float, nl: int) -> None:
     """Plot gluon(x_min) dependence."""
 
     def extract(grid, pdf_):
@@ -315,12 +322,16 @@ def pdf_gluon(nl: int) -> None:
             res.append(pdf_.xfxQ2(21, np.min(sg.x1_grid()), sg.mu2_grid()[0].fac))
         return res
 
-    m2 = MASSES[nl]
+    pdf_raw(
+        m2,
+        nl,
+        "gluon",
+        extract,
+        f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
+    )
 
-    pdf_raw(nl, extract, r"$xg(x_{min})$", "gluon", lambda ax0: add_xmin(m2, ax0))
 
-
-def pdf_gg(nl: int) -> None:
+def pdf_gg(m2: float, nl: int) -> None:
     """Plot gg(x_min) dependence."""
 
     def lumi_ker(z: float, pdf_, x, mu2):
@@ -337,9 +348,9 @@ def pdf_gg(nl: int) -> None:
             res.append(pdf_lumi(pdf_, np.min(sg.x1_grid()), sg.mu2_grid()[0].fac))
         return res
 
-    m2 = MASSES[nl]
-
-    pdf_raw(nl, extract, r"$x L_{gg}(x_{min})$", "gg", lambda ax0: add_xmin(m2, ax0))
+    pdf_raw(
+        m2, nl, "gg", extract, r"$x L_{gg}(x_{min})$", lambda ax0: add_xmin(m2, ax0)
+    )
 
 
 def pto(m2: float, nl: int, pdf: str) -> None:
@@ -462,6 +473,17 @@ def main() -> None:
     # pdf_sets = []
     # if args.iterate_pdf_sets:
     #     pdf_sets = PDF_SET_NAMES[nl_]
+    # multi PDF plots
+    if args.pdf or args.all:
+        print(h_pdf)
+        pdf_obs(m2_, nl_)
+    if args.gluon or args.all:
+        print(h_gluon)
+        pdf_gluon(m2_, nl_)
+    if args.gg or args.all:
+        print(h_gg)
+        pdf_gg(m2_, nl_)
+    # single PDF plots
     if m2_ > 0:
         pdf = PDFS[nl_][f"{m2_:.2f}"]
     else:
@@ -469,23 +491,12 @@ def main() -> None:
         pdf = pdf[0]
     if args.pdf_set:
         pdf = [args.pdf_set]
-    # single PDF plots
     if args.pto or args.all:
         print(h_pto)
         pto(m2_, nl_, pdf)
     if args.lumi or args.all:
         print(h_lumi)
         lumi(m2_, nl_, pdf)
-    # multi PDF plots
-    if args.pdf or args.all:
-        print(h_pdf)
-        pdf_obs(m2_, nl_)
-    if args.gluon or args.all:
-        print(h_gluon)
-        pdf_gluon(nl_)
-    if args.gg or args.all:
-        print(h_gg)
-        pdf_gg(nl_)
 
 
 if __name__ == "__main__":
