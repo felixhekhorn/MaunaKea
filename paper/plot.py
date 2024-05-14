@@ -13,25 +13,9 @@ import pandas as pd
 import pineappl
 from scipy.integrate import quad
 
-from run import LABELS, PDFS, grid_path
+from run import LABELS, MSHT20_MBRANGE, MSHT20_MCRANGE, PDFS, grid_path
 
 TEX_LABELS = {3: r"c\bar{c}", 4: r"b\bar{b}"}
-
-
-PDF_SET_NAMES = {
-    3: [
-        "NNPDF40_nnlo_pch_as_01180_nf_3",
-        "MSHT20nnlo_nf3",
-        "ABMP16_3_nnlo",
-        "CT18NNLO_NF3",
-    ],
-    4: [
-        "NNPDF40_nnlo_as_01180_nf_4",
-        "MSHT20nnlo_nf4",
-        "ABMP16_4_nnlo",
-        "CT18NNLO_NF4",
-    ],
-}
 
 
 # Set the default color cycle
@@ -161,6 +145,27 @@ def load_pdf(
         dfs[pdf_set_name] = df
 
     return dfs
+
+
+def load_mass(m2s: Collection[float], nl: int, pdf_set: str) -> pd.DataFrame:
+    """Load PDF data from a grid."""
+    # prepare objects
+    lhapdf.setVerbosity(0)
+    df = pd.DataFrame()
+    pdf_vals = []
+    for j, m2 in enumerate(m2s):
+        grid_path_ = pathlib.Path(grid_path(m2, nl))
+        grid = pineappl.grid.Grid.read(grid_path_)
+        pdf = lhapdf.mkPDF(pdf_set, j)
+        df["sqrt_s"] = grid.bin_left(0)
+        vals = grid.convolute_with_one(2212, pdf.xfxQ2, pdf.alphasQ2)
+        df[f"{j}"] = vals
+        pdf_vals.append(vals)
+    pdf_vals = np.array(pdf_vals)
+    df["min"] = pdf_vals.min(0)
+    df["max"] = pdf_vals.max(0)
+    df.to_csv(f"data/{LABELS[nl]}-{pdf_set}.csv")
+    return df
 
 
 def pdf_raw(
@@ -447,6 +452,55 @@ def lumi(m2: float, nl: int, pdf: str) -> None:
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi.pdf")
 
 
+def mass(nl: int) -> None:
+    """Plot mass dependency."""
+    # prepare data
+    if nl == 3:
+        m2s = MSHT20_MCRANGE
+        pdf = "MSHT20nnlo_mcrange_nf3"
+    else:
+        m2s = MSHT20_MBRANGE
+        pdf = "MSHT20nnlo_mbrange_nf4"
+    df = load_mass(m2s, nl, pdf)
+
+    # plot bare
+    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
+    axs[0].fill_between(df["sqrt_s"], df["min"], df["max"], alpha=0.4)
+    axs[0].plot(df["sqrt_s"], df["0"], label=pdf)
+    axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+    axs[0].set_xscale("log")
+    axs[0].set_yscale("log")
+    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    axs[0].tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    axs[0].legend()
+    # plot rel. uncertainty
+    axs[1].fill_between(
+        df["sqrt_s"], df["min"] / df["0"], df["max"] / df["0"], alpha=0.4
+    )
+    axs[1].plot(df["sqrt_s"], np.ones(len(df["0"])))
+    axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
+    axs[1].set_ylabel(r"rel. uncertainty")
+    axs[1].tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    fig.tight_layout()
+    fig.savefig(f"plots/{LABELS[nl]}-mass.pdf")
+
+
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser()
@@ -462,17 +516,13 @@ def main() -> None:
     parser.add_argument("--gluon", help=h_gluon, action="store_true")
     h_gg = "Plot gg(x_min)"
     parser.add_argument("--gg", help=h_gg, action="store_true")
+    h_mass = "Plot mass dependency"
+    parser.add_argument("--mass", help=h_mass, action="store_true")
     parser.add_argument("--all", help="Plot everything", action="store_true")
-    # parser.add_argument(
-    #     "--iterate-pdf-sets", help="Iterate on PDF sets", action="store_true"
-    # )
     parser.add_argument("--pdf_set", help="PDF used for plots")
     args = parser.parse_args()
     m2_: float = float(args.m2)
     nl_: int = int(args.nl)
-    # pdf_sets = []
-    # if args.iterate_pdf_sets:
-    #     pdf_sets = PDF_SET_NAMES[nl_]
     # multi PDF plots
     if args.pdf or args.all:
         print(h_pdf)
@@ -483,6 +533,9 @@ def main() -> None:
     if args.gg or args.all:
         print(h_gg)
         pdf_gg(m2_, nl_)
+    if args.mass or args.all:
+        print(h_mass)
+        mass(nl_)
     # single PDF plots
     if m2_ > 0:
         pdf = PDFS[nl_][f"{m2_:.2f}"]

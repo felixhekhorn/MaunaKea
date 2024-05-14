@@ -28,9 +28,11 @@ PDFS = {
         "4.75": "MSHT20nnlo_nf4",  # or "CT18NNLO_NF4",
     },
 }
-for j_, m2_ in enumerate([1.2, 1.25, 1.3, 1.35, 1.45, 1.5, 1.55]):
+MSHT20_MCRANGE = [1.4, 1.2, 1.25, 1.3, 1.35, 1.45, 1.5, 1.55]
+for j_, m2_ in enumerate(MSHT20_MCRANGE[1:]):
     PDFS[3][f"{m2_:.2f}"] = f"MSHT20nnlo_mcrange_nf3/{j_+1}"
-for j_, m2_ in enumerate([4.0, 4.25, 4.5, 5.0, 5.25, 5.5]):
+MSHT20_MBRANGE = [4.75, 4.0, 4.25, 4.5, 5.0, 5.25, 5.5]
+for j_, m2_ in enumerate(MSHT20_MBRANGE[1:]):
     PDFS[4][f"{m2_:.2f}"] = f"MSHT20nnlo_mbrange_nf4/{j_+1}"
 
 
