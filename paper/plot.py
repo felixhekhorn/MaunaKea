@@ -186,7 +186,7 @@ def pdf_raw(
     for actual_m2_, pdfs in elems:
         for pdf, df in load_pdf(actual_m2_, nl, pdfs, suffix, f).items():
             # relabel if necessary
-            new_label = pdf if m2 > 0.0 else f"{pdf} $m_c={actual_m2_:.2f}$ GeV"
+            new_label = pdf if m2 > 0.0 else f"{pdf} $m_h={actual_m2_:.2f}$ GeV"
             dfs[new_label] = df
     output = f"{LABELS[nl]}-{mass_label}{suffix}.pdf"
 
@@ -462,11 +462,12 @@ def mass(nl: int) -> None:
         m2s = MSHT20_MBRANGE
         pdf = "MSHT20nnlo_mbrange_nf4"
     df = load_mass(m2s, nl, pdf)
+    label = f"{pdf} $m_h={min(m2s):.2f} - {max(m2s):.2f}$ GeV"
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
     axs[0].fill_between(df["sqrt_s"], df["min"], df["max"], alpha=0.4)
-    axs[0].plot(df["sqrt_s"], df["0"], label=pdf)
+    axs[0].plot(df["sqrt_s"], df["0"], label=label)
     axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
@@ -488,6 +489,9 @@ def mass(nl: int) -> None:
     axs[1].plot(df["sqrt_s"], np.ones(len(df["0"])))
     axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
     axs[1].set_ylabel(r"rel. uncertainty")
+    axs[1].set_ylim(0.4, 2.1)
+    axs[1].set_yticks(np.arange(0.5, 2.1, 0.5))
+    axs[1].set_yticks(np.arange(0.5, 2.1, 0.1), minor=True)
     axs[1].tick_params(
         "both",
         which="both",
