@@ -332,7 +332,7 @@ def pdf_gluon(m2: float, nl: int) -> None:
         nl,
         "gluon",
         extract,
-        f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
+        r"$xg(x_{min})$",
     )
 
 
@@ -354,7 +354,7 @@ def pdf_gg(m2: float, nl: int) -> None:
         return res
 
     pdf_raw(
-        m2, nl, "gg", extract, r"$x L_{gg}(x_{min})$", lambda ax0: add_xmin(m2, ax0)
+        m2, nl, "gg", extract, r"$x L_{gg}(x_{min})$"  # , lambda ax0: add_xmin(m2, ax0)
     )
 
 
