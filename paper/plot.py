@@ -3,6 +3,7 @@
 import argparse
 import pathlib
 from collections.abc import Callable, Collection, Mapping
+from dataclasses import dataclass
 from typing import Tuple
 
 import lhapdf
@@ -16,6 +17,33 @@ from scipy.integrate import quad
 from run import LABELS, MSHT20_MBRANGE, MSHT20_MCRANGE, PDFS, grid_path
 
 TEX_LABELS = {3: r"c\bar{c}", 4: r"b\bar{b}"}
+
+
+@dataclass(frozen=True)
+class Extrapolation:
+    """Extrapolation configuration"""
+
+    x: float
+    const: bool
+
+    def masked_xfxQ2(self, pdf) -> Callable[[int, float, float], float]:
+        """The masked xfxQ2 function."""
+
+        def xfxQ2(pid: int, x: float, Q2: float):
+            xmin = self.x if self.x >= 0.0 else float(pdf.set().get_entry("XMin"))
+            if x < xmin:
+                return pdf.xfxQ2(pid, xmin, Q2) if self.const else 0.0
+            return pdf.xfxQ2(pid, x, Q2)
+
+        return xfxQ2
+
+    @property
+    def suffix(self) -> str:
+        """File name suffix."""
+        if self.x == 0.0:
+            return ""
+        x = f"{self.x:f}" if self.x >= 0.0 else "n"
+        return f"-ex{x}" + ("_c" if self.const else "")
 
 
 # Set the default color cycle
@@ -175,7 +203,7 @@ def pdf_raw(
     f: Callable,
     ylabel: str,
     update_ax0: Callable = None,
-) -> None:
+) -> Tuple[mpl.figure.Figure, str]:
     """Plot PDF dependence."""
     # load data
     elems = to_elems(m2, nl)
@@ -232,7 +260,9 @@ def pdf_raw(
         right=True,
     )
     fig.tight_layout()
-    fig.savefig(f"plots/{output}")
+    path = f"plots/{output}"
+    fig.savefig(path)
+    return fig, path
 
 
 def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
@@ -269,20 +299,22 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
     return elems
 
 
-def pdf_obs(m2: float, nl: int) -> None:
+def pdf_obs(m2: float, nl: int, extra: Extrapolation) -> None:
     """Plot PDF dependence."""
 
     # plot the actual predictions
     def conv(grid, pdf_):
-        return grid.convolute_with_one(2212, pdf_.xfxQ2, pdf_.alphasQ2)
+        return grid.convolute_with_one(2212, extra.masked_xfxQ2(pdf_), pdf_.alphasQ2)
 
-    pdf_raw(
+    fig, path = pdf_raw(
         m2,
         nl,
-        "pdf",
+        "pdf" + extra.suffix,
         conv,
         f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
     )
+    fig.axes[0].set_ylim(10, 2e5)
+    fig.savefig(path)
 
 
 def _sqrts2xmin(m2: float, sqrt_s: float) -> float:
@@ -317,30 +349,37 @@ def add_xmin(m2: float, ax0) -> None:
     secax.tick_params("x", which="both", direction="in")
 
 
-def pdf_gluon(m2: float, nl: int) -> None:
+def pdf_gluon(m2: float, nl: int, extra: Extrapolation) -> None:
     """Plot gluon(x_min) dependence."""
 
     def extract(grid, pdf_):
         res = []
         for b in range(len(grid.bin_left(0))):
             sg = grid.subgrid(0, b, 0)
-            res.append(pdf_.xfxQ2(21, np.min(sg.x1_grid()), sg.mu2_grid()[0].fac))
+            res.append(
+                extra.masked_xfxQ2(pdf_)(21, np.min(sg.x1_grid()), sg.mu2_grid()[0].fac)
+            )
         return res
 
     pdf_raw(
         m2,
         nl,
-        "gluon",
+        "gluon" + extra.suffix,
         extract,
         r"$xg(x_{min})$",
     )
 
 
-def pdf_gg(m2: float, nl: int) -> None:
+def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
     """Plot gg(x_min) dependence."""
 
     def lumi_ker(z: float, pdf_, x, mu2):
-        return 1.0 / z * pdf_.xfxQ2(21, z, mu2) * pdf_.xfxQ2(21, x / z, mu2)
+        return (
+            1.0
+            / z
+            * extra.masked_xfxQ2(pdf_)(21, z, mu2)
+            * extra.masked_xfxQ2(pdf_)(21, x / z, mu2)
+        )
 
     def pdf_lumi(pdf_, x, mu2):
         i, _e = quad(lumi_ker, x, 1.0, args=(pdf_, x, mu2), limit=100)
@@ -354,7 +393,11 @@ def pdf_gg(m2: float, nl: int) -> None:
         return res
 
     pdf_raw(
-        m2, nl, "gg", extract, r"$x L_{gg}(x_{min})$"  # , lambda ax0: add_xmin(m2, ax0)
+        m2,
+        nl,
+        "gg" + extra.suffix,
+        extract,
+        r"$x L_{gg}(x_{min})$",  # , lambda ax0: add_xmin(m2, ax0)
     )
 
 
@@ -508,8 +551,8 @@ def mass(nl: int) -> None:
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("m2", help="Mass of heavy quark")
-    parser.add_argument("nl", help="Number of light flavors")
+    parser.add_argument("m2", type=float, help="Mass of heavy quark")
+    parser.add_argument("nl", type=int, help="Number of light flavors")
     h_pto = "Plot convergence with PTO"
     parser.add_argument("--pto", help=h_pto, action="store_true")
     h_lumi = "Plot lumi separation"
@@ -524,19 +567,28 @@ def main() -> None:
     parser.add_argument("--mass", help=h_mass, action="store_true")
     parser.add_argument("--all", help="Plot everything", action="store_true")
     parser.add_argument("--pdf_set", help="PDF used for plots")
+    parser.add_argument(
+        "--extrapolate-xmin", type=float, default=0.0, help="Extrapolation region"
+    )
+    parser.add_argument(
+        "--extrapolate-const",
+        help="Extrapolate with f(x_extra) instead of 0",
+        action="store_true",
+    )
     args = parser.parse_args()
     m2_: float = float(args.m2)
     nl_: int = int(args.nl)
+    extra = Extrapolation(float(args.extrapolate_xmin), bool(args.extrapolate_const))
     # multi PDF plots
     if args.pdf or args.all:
         print(h_pdf)
-        pdf_obs(m2_, nl_)
+        pdf_obs(m2_, nl_, extra)
     if args.gluon or args.all:
         print(h_gluon)
-        pdf_gluon(m2_, nl_)
+        pdf_gluon(m2_, nl_, extra)
     if args.gg or args.all:
         print(h_gg)
-        pdf_gg(m2_, nl_)
+        pdf_gg(m2_, nl_, extra)
     if args.mass or args.all:
         print(h_mass)
         mass(nl_)
