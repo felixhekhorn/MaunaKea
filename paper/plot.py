@@ -235,7 +235,6 @@ def pdf_raw(
     suffix: str,
     f: Callable,
     ylabel: str,
-    update_ax0: Callable = None,
 ) -> Tuple[mpl.figure.Figure, str]:
     """Plot PDF dependence."""
     # load data
@@ -271,8 +270,8 @@ def pdf_raw(
         right=True,
     )
     axs[0].legend()
-    if update_ax0:
-        update_ax0(axs[0])
+    if m2 != 0.0:
+        add_xmin(m2, axs[0])
     # rel. size
     norm = list(dfs.values())[0]["central"]
     for _, df in dfs.items():
@@ -430,7 +429,7 @@ def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
         nl,
         "gg" + extra.suffix,
         extract,
-        r"$x L_{gg}(x_{min})$",  # , lambda ax0: add_xmin(m2, ax0)
+        r"$x L_{gg}(x_{min})$",
     )
 
 
@@ -458,6 +457,7 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
         left=True,
         right=True,
     )
+    add_xmin(m2, axs[0])
     axs[0].legend()
     # plot K-factor
     axs[1].plot([])  # add empty plot to align colors
@@ -510,6 +510,7 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
         left=True,
         right=True,
     )
+    add_xmin(m2, axs[0])
     axs[0].legend()
     # plot rel. PDF uncertainty
     norm = dfs[0]["central"]
@@ -575,6 +576,7 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
         left=True,
         right=True,
     )
+    add_xmin(m2, ax)
     ax.legend()
     fig.tight_layout()
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi{extra.suffix}.pdf")
