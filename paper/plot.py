@@ -688,7 +688,7 @@ def main() -> None:
         m2_, pdf = to_elems(m2_, nl_)[0]
         pdf = pdf[0]
     if args.pdf_set:
-        pdf = [args.pdf_set]
+        pdf = args.pdf_set
     if args.pto or args.all:
         print(h_pto)
         pto(m2_, nl_, pdf, extra_)
