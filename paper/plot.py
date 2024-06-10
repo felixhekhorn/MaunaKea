@@ -107,6 +107,23 @@ def load_pto(
     return dfs
 
 
+def load_extra(
+    m2: float, nl: int, pdf: str, extras: Collection[Extrapolation]
+) -> Collection[pd.DataFrame]:
+    """Load extrapolation data."""
+    dfs = []
+    for extra in extras:
+
+        def conv(grid, pdf_, extra=extra):
+            return grid.convolute_with_one(
+                2212, extra.masked_xfxQ2(pdf_), pdf_.alphasQ2
+            )
+
+        pdfs = load_pdf(m2, nl, [pdf], f"extra{extra.suffix}", conv)
+        dfs.append(pdfs[pdf])
+    return dfs
+
+
 def extract_lumis_by_order(
     grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
 ) -> pd.DataFrame:
@@ -465,6 +482,58 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto{extra.suffix}.pdf")
 
 
+def extra_dep(m2: float, nl: int, pdf: str) -> None:
+    """Plot extrapolation dependency."""
+    # prepare data
+    extras = [
+        Extrapolation(0, False),
+        Extrapolation(-1, False),
+        Extrapolation(1e-5, False),
+    ]
+    dfs = load_extra(m2, nl, pdf, extras)
+
+    # plot xs
+    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
+    for extra, df in zip(extras, dfs):
+        axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
+        axs[0].plot(df["sqrt_s"], df["central"], label=f"{extra.x};{extra.const}")
+        axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+    axs[0].set_xscale("log")
+    axs[0].set_yscale("log")
+    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    axs[0].tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    axs[0].legend()
+    # plot rel. PDF uncertainty
+    norm = dfs[0]["central"]
+    for df in dfs:
+        axs[1].fill_between(
+            df["sqrt_s"], df["pdf_plus"] / norm, df["pdf_minus"] / norm, alpha=0.4
+        )
+        axs[1].plot(df["sqrt_s"], df["central"] / norm)
+    axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
+    axs[1].set_ylabel(r"rel. PDF unc.")
+    axs[1].set_ylim(-0.5, 2)
+    axs[1].tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    fig.tight_layout()
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-extra.pdf")
+
+
 def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     """Plot lumi separation."""
     # prepare data
@@ -581,6 +650,8 @@ def main() -> None:
     parser.add_argument("--gg", help=h_gg, action="store_true")
     h_mass = "Plot mass dependency"
     parser.add_argument("--mass", help=h_mass, action="store_true")
+    h_extra = "Plot extrapolation dependency"
+    parser.add_argument("--extra", help=h_extra, action="store_true")
     parser.add_argument("--all", help="Plot everything", action="store_true")
     parser.add_argument("--pdf_set", help="PDF used for plots")
     parser.add_argument(
@@ -594,20 +665,20 @@ def main() -> None:
     args = parser.parse_args()
     m2_: float = float(args.m2)
     nl_: int = int(args.nl)
-    extra = Extrapolation(float(args.extrapolate_xmin), bool(args.extrapolate_const))
+    extra_ = Extrapolation(float(args.extrapolate_xmin), bool(args.extrapolate_const))
     # multi PDF plots
     if args.pdf or args.all:
         print(h_pdf)
-        pdf_obs(m2_, nl_, extra)
+        pdf_obs(m2_, nl_, extra_)
     if args.gluon or args.all:
         print(h_gluon)
-        pdf_gluon(m2_, nl_, extra)
+        pdf_gluon(m2_, nl_, extra_)
     if args.gg or args.all:
         print(h_gg)
-        pdf_gg(m2_, nl_, extra)
+        pdf_gg(m2_, nl_, extra_)
     if args.mass or args.all:
         print(h_mass)
-        mass(nl_, extra)
+        mass(nl_, extra_)
     # single PDF plots
     if m2_ > 0:
         pdf = PDFS[nl_][f"{m2_:.2f}"]
@@ -618,10 +689,13 @@ def main() -> None:
         pdf = [args.pdf_set]
     if args.pto or args.all:
         print(h_pto)
-        pto(m2_, nl_, pdf, extra)
+        pto(m2_, nl_, pdf, extra_)
     if args.lumi or args.all:
         print(h_lumi)
-        lumi(m2_, nl_, pdf, extra)
+        lumi(m2_, nl_, pdf, extra_)
+    if args.extra or args.all:
+        print(h_extra)
+        extra_dep(m2_, nl_, pdf)
 
 
 if __name__ == "__main__":
