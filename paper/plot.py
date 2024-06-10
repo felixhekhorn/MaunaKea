@@ -53,13 +53,16 @@ mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
 
 
 def extract_sv_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto_: int
+    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
 ) -> pd.DataFrame:
     """Extract a given PTO together with its SV."""
     # compute central value
     order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
     central = grid.convolute_with_one(
-        2212, central_pdf.xfxQ2, central_pdf.alphasQ2, order_mask=order_mask
+        2212,
+        extra.masked_xfxQ2(central_pdf),
+        central_pdf.alphasQ2,
+        order_mask=order_mask,
     )
     # compute SV
     xis = []
@@ -71,7 +74,11 @@ def extract_sv_by_order(
     # xis = [(0.5, 0.5), (2.0, 2.0)]
     sv_vals = (
         grid.convolute_with_one(
-            2212, central_pdf.xfxQ2, central_pdf.alphasQ2, xi=xis, order_mask=order_mask
+            2212,
+            extra.masked_xfxQ2(central_pdf),
+            central_pdf.alphasQ2,
+            xi=xis,
+            order_mask=order_mask,
         )
     ).reshape(len(central), 7)
     df = pd.DataFrame()
@@ -82,7 +89,9 @@ def extract_sv_by_order(
     return df
 
 
-def load_pto(m2: float, nl: int, pdf: str) -> Mapping[int, pd.DataFrame]:
+def load_pto(
+    m2: float, nl: int, pdf: str, extra: Extrapolation
+) -> Mapping[int, pd.DataFrame]:
     """Load PTO data."""
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(m2, nl))
@@ -92,19 +101,22 @@ def load_pto(m2: float, nl: int, pdf: str) -> Mapping[int, pd.DataFrame]:
     # prepare data
     dfs = {}
     for k in range(2 + 1):
-        df = extract_sv_by_order(grid, central_pdf, k)
-        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-pto-{k}.csv")
+        df = extract_sv_by_order(grid, central_pdf, extra, k)
+        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-pto-{k}{extra.suffix}.csv")
         dfs[k] = df
     return dfs
 
 
 def extract_lumis_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, pto_: int
+    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
 ) -> pd.DataFrame:
     """Extract lumi fraction for a given PTO."""
     order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
     full = grid.convolute_with_one(
-        2212, central_pdf.xfxQ2, central_pdf.alphasQ2, order_mask=order_mask
+        2212,
+        extra.masked_xfxQ2(central_pdf),
+        central_pdf.alphasQ2,
+        order_mask=order_mask,
     )
     df = pd.DataFrame()
     df["sqrt_s"] = grid.bin_left(0)
@@ -114,7 +126,7 @@ def extract_lumis_by_order(
         lumi_mask[lu] = True
         df[lab] = grid.convolute_with_one(
             2212,
-            central_pdf.xfxQ2,
+            extra.masked_xfxQ2(central_pdf),
             central_pdf.alphasQ2,
             lumi_mask=lumi_mask,
             order_mask=order_mask,
@@ -122,7 +134,9 @@ def extract_lumis_by_order(
     return df
 
 
-def load_lumi(m2: float, nl: int, pdf: str) -> Mapping[int, pd.DataFrame]:
+def load_lumi(
+    m2: float, nl: int, pdf: str, extra: Extrapolation
+) -> Mapping[int, pd.DataFrame]:
     """Load lumi data."""
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(m2, nl))
@@ -132,8 +146,8 @@ def load_lumi(m2: float, nl: int, pdf: str) -> Mapping[int, pd.DataFrame]:
     # prepare data
     dfs = {}
     for k in range(2 + 1):
-        df = extract_lumis_by_order(grid, central_pdf, k)
-        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi-{k}.csv")
+        df = extract_lumis_by_order(grid, central_pdf, extra, k)
+        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi-{k}{extra.suffix}.csv")
         dfs[k] = df
     return dfs
 
@@ -175,7 +189,9 @@ def load_pdf(
     return dfs
 
 
-def load_mass(m2s: Collection[float], nl: int, pdf_set: str) -> pd.DataFrame:
+def load_mass(
+    m2s: Collection[float], nl: int, pdf_set: str, extra: Extrapolation
+) -> pd.DataFrame:
     """Load PDF data from a grid."""
     # prepare objects
     lhapdf.setVerbosity(0)
@@ -186,13 +202,13 @@ def load_mass(m2s: Collection[float], nl: int, pdf_set: str) -> pd.DataFrame:
         grid = pineappl.grid.Grid.read(grid_path_)
         pdf = lhapdf.mkPDF(pdf_set, j)
         df["sqrt_s"] = grid.bin_left(0)
-        vals = grid.convolute_with_one(2212, pdf.xfxQ2, pdf.alphasQ2)
+        vals = grid.convolute_with_one(2212, extra.masked_xfxQ2(pdf), pdf.alphasQ2)
         df[f"{j}"] = vals
         pdf_vals.append(vals)
     pdf_vals = np.array(pdf_vals)
     df["min"] = pdf_vals.min(0)
     df["max"] = pdf_vals.max(0)
-    df.to_csv(f"data/{LABELS[nl]}-{pdf_set}.csv")
+    df.to_csv(f"data/{LABELS[nl]}-{pdf_set}{extra.suffix}.csv")
     return df
 
 
@@ -401,10 +417,10 @@ def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
     )
 
 
-def pto(m2: float, nl: int, pdf: str) -> None:
+def pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     """Plot convergence of PTO."""
     # prepare data
-    dfs = load_pto(m2, nl, pdf)
+    dfs = load_pto(m2, nl, pdf, extra)
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
@@ -446,13 +462,13 @@ def pto(m2: float, nl: int, pdf: str) -> None:
     )
     axs[1].legend()
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto{extra.suffix}.pdf")
 
 
-def lumi(m2: float, nl: int, pdf: str) -> None:
+def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     """Plot lumi separation."""
     # prepare data
-    dfs = load_lumi(m2, nl, pdf)
+    dfs = load_lumi(m2, nl, pdf, extra)
 
     # plot
     fig, ax = plt.subplots(1, 1)
@@ -492,10 +508,10 @@ def lumi(m2: float, nl: int, pdf: str) -> None:
     )
     ax.legend()
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi{extra.suffix}.pdf")
 
 
-def mass(nl: int) -> None:
+def mass(nl: int, extra: Extrapolation) -> None:
     """Plot mass dependency."""
     # prepare data
     if nl == 3:
@@ -504,7 +520,7 @@ def mass(nl: int) -> None:
     else:
         m2s = MSHT20_MBRANGE
         pdf = "MSHT20nnlo_mbrange_nf4"
-    df = load_mass(m2s, nl, pdf)
+    df = load_mass(m2s, nl, pdf, extra)
     label = f"{pdf} $m_h={min(m2s):.2f} - {max(m2s):.2f}$ GeV"
 
     # plot bare
@@ -545,7 +561,7 @@ def mass(nl: int) -> None:
         right=True,
     )
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-mass.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-mass{extra.suffix}.pdf")
 
 
 def main() -> None:
@@ -591,7 +607,7 @@ def main() -> None:
         pdf_gg(m2_, nl_, extra)
     if args.mass or args.all:
         print(h_mass)
-        mass(nl_)
+        mass(nl_, extra)
     # single PDF plots
     if m2_ > 0:
         pdf = PDFS[nl_][f"{m2_:.2f}"]
@@ -602,10 +618,10 @@ def main() -> None:
         pdf = [args.pdf_set]
     if args.pto or args.all:
         print(h_pto)
-        pto(m2_, nl_, pdf)
+        pto(m2_, nl_, pdf, extra)
     if args.lumi or args.all:
         print(h_lumi)
-        lumi(m2_, nl_, pdf)
+        lumi(m2_, nl_, pdf, extra)
 
 
 if __name__ == "__main__":
