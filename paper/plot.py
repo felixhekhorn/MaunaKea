@@ -496,7 +496,15 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
     for extra, df in zip(extras, dfs):
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
-        axs[0].plot(df["sqrt_s"], df["central"], label=f"{extra.x};{extra.const}")
+        lab = "LHAPDF"
+        if extra.x != 0.0:
+            xmin = r"x_{min}^*" if extra.x < 0.0 else f"{extra.x}"
+            if np.isclose(extra.x, 1e-4):
+                xmin = r"10^{-4}"
+            elif np.isclose(extra.x, 1e-5):
+                xmin = r"10^{-5}"
+            lab = f"$f(x<{xmin})$=" + ("0" if not extra.const else f"f({xmin})")
+        axs[0].plot(df["sqrt_s"], df["central"], label=lab)
         axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
@@ -521,7 +529,7 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
         axs[1].plot(df["sqrt_s"], df["central"] / norm)
     axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
     axs[1].set_ylabel(r"rel. PDF unc.")
-    axs[1].set_ylim(-0.5, 2)
+    axs[1].set_ylim(0.5, 1.5)
     axs[1].tick_params(
         "both",
         which="both",
