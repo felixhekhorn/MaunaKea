@@ -1,0 +1,5 @@
+numpy
+scipy
+matplotlib
+pandas
+pineappl==0.7.4
