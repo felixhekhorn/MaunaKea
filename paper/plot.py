@@ -107,6 +107,73 @@ def load_pto(
     return dfs
 
 
+def load_xmean_pto(
+    m2: float, nl: int, pdf: str, extra: Extrapolation
+) -> Mapping[int, pd.DataFrame]:
+    """Load PTO data."""
+    # prepare objects
+    grid_path_ = pathlib.Path(grid_path(m2, nl))
+    lhapdf.setVerbosity(0)
+    pdf_ = lhapdf.mkPDF(pdf)
+    grid = pineappl.grid.Grid.read(grid_path_)
+    # prepare data
+    dfs = {}
+    for k in range(2 + 1):
+        order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + k, 0, True)
+        # <x> = <(x1+x2)/2>
+        x1 = grid.convolute_with_two(
+            2212,
+            lambda pid, x, q2: x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
+            2212,
+            extra.masked_xfxQ2(pdf_),
+            pdf_.alphasQ2,
+            order_mask=order_mask,
+        )
+        x2 = grid.convolute_with_two(
+            2212,
+            extra.masked_xfxQ2(pdf_),
+            2212,
+            lambda pid, x, q2: x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
+            pdf_.alphasQ2,
+            order_mask=order_mask,
+        )
+        sig = grid.convolute_with_one(
+            2212, extra.masked_xfxQ2(pdf_), pdf_.alphasQ2, order_mask=order_mask
+        )
+        mean = (x1 + x2) / (2.0 * sig)
+        # Δx^2 = <(x-<x>)^2> = <x^2> - <x>^2
+        x1x1 = grid.convolute_with_two(
+            2212,
+            lambda pid, x, q2: x * x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
+            2212,
+            extra.masked_xfxQ2(pdf_),
+            pdf_.alphasQ2,
+            order_mask=order_mask,
+        )
+        x1x2 = grid.convolute_with_one(
+            2212,
+            lambda pid, x, q2: x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
+            pdf_.alphasQ2,
+            order_mask=order_mask,
+        )
+        x2x2 = grid.convolute_with_two(
+            2212,
+            extra.masked_xfxQ2(pdf_),
+            2212,
+            lambda pid, x, q2: x * x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
+            pdf_.alphasQ2,
+            order_mask=order_mask,
+        )
+        unc2 = (x1x1 + 2.0 * x1x2 + x2x2) / sig - mean**2.0
+        df = pd.DataFrame()
+        df["sqrt_s"] = grid.bin_left(0)
+        df["mean"] = mean
+        df["unc"] = np.sqrt(unc2)
+        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-xmean-pto-{k}{extra.suffix}.csv")
+        dfs[k] = df
+    return dfs
+
+
 def load_extra(
     m2: float, nl: int, pdf: str, extras: Collection[Extrapolation]
 ) -> Collection[pd.DataFrame]:
@@ -512,6 +579,64 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto{extra.suffix}.pdf")
 
 
+def xmean_pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
+    """Plot x_mean PTO dependence."""
+    # prepare data
+    dfs = load_xmean_pto(m2, nl, pdf, extra)
+
+    # plot bare
+    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
+    for k, lab in [(0, "LO"), (1, "NLO"), (2, "NNLO")]:
+        df = dfs[k]
+        axs[0].fill_between(
+            df["sqrt_s"], df["mean"] - df["unc"], df["mean"] + df["unc"], alpha=0.4
+        )
+        axs[0].plot(df["sqrt_s"], df["mean"], label=lab)
+        axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+    axs[0].set_xscale("log")
+    axs[0].set_yscale("log")
+    axs[0].set_ylabel(f"$\\langle x \\rangle_{{{TEX_LABELS[nl]}}}$")
+    axs[0].tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    add_xmin(m2, axs[0])
+    axs[0].legend()
+    # plot K-factor
+    axs[1].fill_between([], [])  # add empty plot to align colors
+    axs[1].plot([])
+    for k1, k2, lab in [(1, 0, "NLO/LO"), (2, 1, "NNLO/NLO")]:
+        df1, df2 = dfs[k1], dfs[k2]
+        norm = df2["mean"]
+        axs[1].fill_between(
+            df1["sqrt_s"],
+            (df1["mean"] - df1["unc"]) / norm,
+            (df1["mean"] + df1["unc"]) / norm,
+            alpha=0.4,
+        )
+        axs[1].plot(df1["sqrt_s"], df1["mean"] / norm, label=lab)
+    axs[1].set_ylim(0, 3.0)
+    axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
+    axs[1].set_ylabel(r"K factor")
+    axs[1].tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    axs[1].legend()
+    fig.tight_layout()
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-xmean-pto{extra.suffix}.pdf")
+
+
 def extra_dep(m2: float, nl: int, pdf: str) -> None:
     """Plot extrapolation dependency."""
     # prepare data
@@ -686,8 +811,10 @@ def main() -> None:
     parser.add_argument("--pdf", help=h_pdf, action="store_true")
     h_gluon = "Plot gluon(x_min)"
     parser.add_argument("--gluon", help=h_gluon, action="store_true")
-    h_xmean = "Plot x_mean"
+    h_xmean = "Plot x_mean PDF dependence"
     parser.add_argument("--xmean", help=h_xmean, action="store_true")
+    h_xmean_pto = "Plot x_mean PTO dependence"
+    parser.add_argument("--xmean-pto", help=h_xmean_pto, action="store_true")
     h_gg = "Plot gg(x_min)"
     parser.add_argument("--gg", help=h_gg, action="store_true")
     h_mass = "Plot mass dependency"
@@ -736,6 +863,9 @@ def main() -> None:
     if args.pto or args.all:
         print(h_pto)
         pto(m2_, nl_, pdf, extra_)
+    if args.xmean_pto or args.all:
+        print(h_xmean_pto)
+        xmean_pto(m2_, nl_, pdf, extra_)
     if args.lumi or args.all:
         print(h_lumi)
         lumi(m2_, nl_, pdf, extra_)
