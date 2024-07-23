@@ -402,6 +402,36 @@ def pdf_gluon(m2: float, nl: int, extra: Extrapolation) -> None:
     )
 
 
+def pdf_xmean(m2: float, nl: int, extra: Extrapolation) -> None:
+    """Plot x_mean PDF dependence."""
+
+    def conv(grid, pdf_):
+        x1 = grid.convolute_with_two(
+            2212,
+            lambda pid, x, q2: x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
+            2212,
+            extra.masked_xfxQ2(pdf_),
+            pdf_.alphasQ2,
+        )
+        x2 = grid.convolute_with_two(
+            2212,
+            extra.masked_xfxQ2(pdf_),
+            2212,
+            lambda pid, x, q2: x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
+            pdf_.alphasQ2,
+        )
+        sig = grid.convolute_with_one(2212, extra.masked_xfxQ2(pdf_), pdf_.alphasQ2)
+        return (x1 + x2) / (2.0 * sig)
+
+    pdf_raw(
+        m2,
+        nl,
+        "xmean" + extra.suffix,
+        conv,
+        r"$\langle x\rangle$",
+    )
+
+
 def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
     """Plot gg(x_min) dependence."""
 
@@ -656,6 +686,8 @@ def main() -> None:
     parser.add_argument("--pdf", help=h_pdf, action="store_true")
     h_gluon = "Plot gluon(x_min)"
     parser.add_argument("--gluon", help=h_gluon, action="store_true")
+    h_xmean = "Plot x_mean"
+    parser.add_argument("--xmean", help=h_xmean, action="store_true")
     h_gg = "Plot gg(x_min)"
     parser.add_argument("--gg", help=h_gg, action="store_true")
     h_mass = "Plot mass dependency"
@@ -663,6 +695,7 @@ def main() -> None:
     h_extra = "Plot extrapolation dependency"
     parser.add_argument("--extra", help=h_extra, action="store_true")
     parser.add_argument("--all", help="Plot everything", action="store_true")
+    # configuration parameter
     parser.add_argument("--pdf_set", help="PDF used for plots")
     parser.add_argument(
         "--extrapolate-xmin", type=float, default=0.0, help="Extrapolation region"
@@ -683,6 +716,9 @@ def main() -> None:
     if args.gluon or args.all:
         print(h_gluon)
         pdf_gluon(m2_, nl_, extra_)
+    if args.xmean or args.all:
+        print(h_xmean)
+        pdf_xmean(m2_, nl_, extra_)
     if args.gg or args.all:
         print(h_gg)
         pdf_gg(m2_, nl_, extra_)
