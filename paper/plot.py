@@ -530,7 +530,11 @@ def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
     )
 
 
-def pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
+# restrict sqrt(s) if requested
+SHORT_RANGE_MAX: float = 14e3
+
+
+def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
     """Plot convergence of PTO."""
     # prepare data
     dfs = load_pto(m2, nl, pdf, extra)
@@ -541,7 +545,9 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
         df = dfs[k]
         axs[0].fill_between(df["sqrt_s"], df["sv_min"], df["sv_max"], alpha=0.4)
         axs[0].plot(df["sqrt_s"], df["central"], label=lab)
-        axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+        axs[0].set_xlim(
+            df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
+        )
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
     axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
@@ -576,7 +582,8 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     )
     axs[1].legend()
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto{extra.suffix}.pdf")
+    sr_suffix = "-sr" if short_range else ""
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto{extra.suffix}{sr_suffix}.pdf")
 
 
 def xmean_pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
@@ -698,7 +705,7 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-extra.pdf")
 
 
-def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
+def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
     """Plot lumi separation."""
     # prepare data
     dfs = load_lumi(m2, nl, pdf, extra)
@@ -725,7 +732,9 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
                 color=f"C{lu}",
                 linestyle=ls,
             )
-        ax.set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+        ax.set_xlim(
+            df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
+        )
     ax.set_ylim(-25, 107)
     ax.set_xscale("log")
     ax.set_ylabel(r"$\sigma^{ij}/\sigma^{tot}$ [%]")
@@ -742,7 +751,8 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     add_xmin(m2, ax)
     ax.legend()
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi{extra.suffix}.pdf")
+    sr_suffix = "-sr" if short_range else ""
+    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi{extra.suffix}{sr_suffix}.pdf")
 
 
 def mass(nl: int, extra: Extrapolation) -> None:
@@ -832,6 +842,7 @@ def main() -> None:
         help="Extrapolate with f(x_extra) instead of 0",
         action="store_true",
     )
+    parser.add_argument("--short-range", help="Restrict abscissa", action="store_true")
     args = parser.parse_args()
     m2_: float = float(args.m2)
     nl_: int = int(args.nl)
@@ -862,13 +873,13 @@ def main() -> None:
         pdf = args.pdf_set
     if args.pto or args.all:
         print(h_pto)
-        pto(m2_, nl_, pdf, extra_)
+        pto(m2_, nl_, pdf, extra_, args.short_range)
     if args.xmean_pto or args.all:
         print(h_xmean_pto)
         xmean_pto(m2_, nl_, pdf, extra_)
     if args.lumi or args.all:
         print(h_lumi)
-        lumi(m2_, nl_, pdf, extra_)
+        lumi(m2_, nl_, pdf, extra_, args.short_range)
     if args.extra or args.all:
         print(h_extra)
         extra_dep(m2_, nl_, pdf)
