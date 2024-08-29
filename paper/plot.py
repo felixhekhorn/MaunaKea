@@ -755,7 +755,7 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi{extra.suffix}{sr_suffix}.pdf")
 
 
-def mass(nl: int, extra: Extrapolation) -> None:
+def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     """Plot mass dependency."""
     # prepare data
     if nl == 3:
@@ -765,13 +765,15 @@ def mass(nl: int, extra: Extrapolation) -> None:
         m2s = MSHT20_MBRANGE
         pdf = "MSHT20nnlo_mbrange_nf4"
     df = load_mass(m2s, nl, pdf, extra)
-    label = f"{pdf} $m_h={min(m2s):.2f} - {max(m2s):.2f}$ GeV"
+    label = f"{pdf} $m_{TEX_LABELS[nl][0]}={min(m2s):.2f} - {max(m2s):.2f}$ GeV"
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
     axs[0].fill_between(df["sqrt_s"], df["min"], df["max"], alpha=0.4)
     axs[0].plot(df["sqrt_s"], df["0"], label=label)
-    axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+    axs[0].set_xlim(
+        df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
+    )
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
     axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
@@ -805,7 +807,8 @@ def mass(nl: int, extra: Extrapolation) -> None:
         right=True,
     )
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-mass{extra.suffix}.pdf")
+    sr_suffix = "-sr" if short_range else ""
+    fig.savefig(f"plots/{LABELS[nl]}-mass{extra.suffix}{sr_suffix}.pdf")
 
 
 def main() -> None:
@@ -862,7 +865,7 @@ def main() -> None:
         pdf_gg(m2_, nl_, extra_)
     if args.mass or args.all:
         print(h_mass)
-        mass(nl_, extra_)
+        mass(nl_, extra_, args.short_range)
     # single PDF plots
     if m2_ > 0:
         pdf = PDFS[nl_][f"{m2_:.2f}"]
