@@ -12,9 +12,13 @@ import pineappl
 
 import MaunaKea
 
-LABELS = {3: "ccbar", 4: "bbbar"}
+LABELS = {3: "ccbar", 4: "bbbar", -3: "data-ccbar", -4: "data-bbbar"}
 SH_MIN: float = 20.0**2
 SH_MAX: float = 400e3**2
+DATA_SH = {
+    3: np.array([30.0, 40.0, 300.0, 3e3, 13e3]) ** 2,
+    4: np.array([130.0, 140.0]) ** 2,
+}
 CALLS: int = 50000
 # setup default PDFs
 PDFS = {
@@ -50,10 +54,17 @@ def compute(
     ndata: int, m2: float, nl: int, pdf: str, processes: int = -1, quick: bool = False
 ) -> None:
     """Compute grids."""
+    # determine energy range
+    if nl < 0:
+        sh_range = DATA_SH[abs(nl)]
+        ndata = len(sh_range)
+    else:
+        sh_range = np.geomspace(SH_MIN, SH_MAX, ndata)
+    # parallelize
     if processes <= 0:
         processes = max(os.cpu_count() + processes, 1)
     start = time.perf_counter()
-    print(f"Computing with m2={m2}, nl={nl}, pdf={pdf} using {processes} threads")
+    print(f"Computing with m2={m2}, nl={abs(nl)}, pdf={pdf} using {processes} threads")
     with Pool(processes) as p:
         p.starmap(
             compute_subgrid,
@@ -62,7 +73,7 @@ def compute(
                 [ndata] * ndata,
                 [m2] * ndata,
                 [nl] * ndata,
-                np.geomspace(SH_MIN, SH_MAX, ndata),
+                sh_range,
                 [pdf] * ndata,
                 [quick] * ndata,
             ),
@@ -80,7 +91,7 @@ def compute_subgrid(
     lhapdf.setVerbosity(0)
     start = time.perf_counter()
     # init object
-    mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
+    mk = MaunaKea.MaunaKea(m2, abs(nl), MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
     mk.intCfg.calls = 5000 if quick else CALLS
     mk.setHadronicS(sh)
     mk.setPDF(pdf)
@@ -99,6 +110,8 @@ def merge(ndata: int, m2: float, nl: int) -> None:
     """Merge grids."""
     # merge grids according to their c.o.m. energy
     base = None
+    if nl < 0:
+        ndata = len(DATA_SH[abs(nl)])
     for j in range(ndata):
         subgrid_path_ = pathlib.Path(subgrid_path(m2, nl, j))
         grid = pineappl.grid.Grid.read(subgrid_path_)
@@ -148,7 +161,7 @@ def cli() -> None:
     if args.pdf:
         pdf_ = args.pdf
     else:
-        pdf_ = PDFS[nl_].get(f"{m2_:.2f}")
+        pdf_ = PDFS[abs(nl_)].get(f"{m2_:.2f}")
     if pdf_ is None or len(pdf_.strip()) <= 0:
         raise ValueError("No PDF set given!")
     # do something
