@@ -4,7 +4,9 @@ import argparse
 import os
 import pathlib
 import time
+from dataclasses import dataclass
 from multiprocessing import Pool
+from typing import Optional
 
 import lhapdf
 import numpy as np
@@ -12,12 +14,58 @@ import pineappl
 
 import MaunaKea
 
+
+@dataclass(frozen=True)
+class ExpConfig:
+    """Experiment config"""
+
+    no: str
+    """Reference number."""
+    sqrts: float
+    """Center-of-mass energy in GeV."""
+    correction: Optional[int] = None
+    """Correction to compute."""
+
+
+A: dict[str, int] = {"S": 32, "Au": 197, "Pb": 208}
+
 LABELS = {3: "ccbar", 4: "bbbar", -3: "data-ccbar", -4: "data-bbbar"}
 SH_MIN: float = 20.0**2
 SH_MAX: float = 400e3**2
-DATA_SH = {
-    3: np.array([30.0, 40.0, 300.0, 3e3, 13e3]) ** 2,
-    4: np.array([130.0, 140.0]) ** 2,
+DATA: dict[int, list[ExpConfig]] = {
+    3: [
+        ExpConfig("55", 0.0114e3),
+        ExpConfig("48", 0.0217e3),
+        ExpConfig("48", 0.026e3),
+        ExpConfig("48", 0.0274e3),
+        ExpConfig("48", 0.0289e3),
+        ExpConfig("48", 0.0389e3),
+        ExpConfig("47", 0.0416e3),
+        ExpConfig("46", 0.0685e3),
+        ExpConfig("45,55", 0.1104e3),
+        ExpConfig("37,41,42,44", 0.2e3),
+        ExpConfig("34", 1.96e3),
+        ExpConfig("19", 2.76e3),
+        ExpConfig("31", 5e3),
+        ExpConfig("20,32,92", 5e3, A["Pb"]),
+        ExpConfig("94,97,98", 5.02e3),
+        ExpConfig("15,17,21,23", 7e3),
+        ExpConfig("93,95", 8.16e3, A["Pb"]),
+        ExpConfig("11", 13e3),
+    ],
+    4: [
+        ExpConfig("89", 0.0387e3, A["S"]),
+        ExpConfig("90", 0.0387e3, A["Au"]),
+        ExpConfig("88", 0.0416e3),
+        ExpConfig("43,84", 0.2e3),
+        ExpConfig("82", 0.51e3),
+        ExpConfig("80", 0.63e3, -1),
+        ExpConfig("77", 1.96e3),
+        ExpConfig("76", 2.76e3),
+        ExpConfig("75", 5.02e3, A["Pb"]),
+        ExpConfig("15,16,56", 7e3),
+        ExpConfig("56", 13e3),
+    ],
 }
 CALLS: int = 50000
 # setup default PDFs
@@ -56,7 +104,7 @@ def compute(
     """Compute grids."""
     # determine energy range
     if nl < 0:
-        sh_range = DATA_SH[abs(nl)]
+        sh_range = [c.sqrts**2.0 for c in DATA[abs(nl)]]
         ndata = len(sh_range)
     else:
         sh_range = np.geomspace(SH_MIN, SH_MAX, ndata)
@@ -111,7 +159,7 @@ def merge(ndata: int, m2: float, nl: int) -> None:
     # merge grids according to their c.o.m. energy
     base = None
     if nl < 0:
-        ndata = len(DATA_SH[abs(nl)])
+        ndata = len(DATA[abs(nl)])
     for j in range(ndata):
         subgrid_path_ = pathlib.Path(subgrid_path(m2, nl, j))
         grid = pineappl.grid.Grid.read(subgrid_path_)

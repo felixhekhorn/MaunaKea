@@ -4,19 +4,18 @@ import argparse
 import pathlib
 
 import lhapdf
+import numpy as np
 import pandas as pd
 import pineappl
 
-from run import LABELS, grid_path
-
-CORRECTIONS = {3: [None, "pbar", None, None, None]}
+from run import DATA, LABELS, PDFS, grid_path
 
 
-def run(m2: float, nl: int) -> None:
+def run(m2: float, nl: int, pdf: str) -> None:
     grid_path_ = pathlib.Path(grid_path(m2, nl))
-    pdf = "NNPDF40_nnlo_pch_as_01180_nf_3"
     lhapdf.setVerbosity(0)
     central_pdf = lhapdf.mkPDF(pdf)
+
     grid = pineappl.grid.Grid.read(grid_path_)
     pp = grid.convolute_with_one(
         2212,
@@ -43,16 +42,17 @@ def run(m2: float, nl: int) -> None:
             central_pdf.alphasQ2,
         )
     ) / 2.0
-    df = pd.DataFrame()
-    df["sqrt_s"] = grid.bin_left(0)
-    df["pp"] = pp
-    df["ppbar"] = 0.0
-    df["R"] = 1.0
-    for j, mod in enumerate(CORRECTIONS[abs(nl)]):
-        if mod is None:
-            continue
-        df.loc[j, "ppbar"] = ppbar[j]
-        df.loc[j, "R"] = pp[j] / ppbar[j]
+    sqrt_s = grid.bin_left(0)
+    data = []
+    for cfg in DATA[abs(nl)]:
+        idx = np.argsort(np.abs(sqrt_s - cfg.sqrts))[0]
+        el = {"no": cfg.no, "sqrt_s": cfg.sqrts, "pp": pp[idx], "pX": pp[idx]}
+        # apply correction
+        if cfg.correction == -1:
+            el["pX"] = ppbar[idx]
+        data.append(el)
+    df = pd.DataFrame.from_records(data)
+    df["R"] = df["pp"] / df["pX"]
     df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-corrections.csv")
 
 
@@ -61,10 +61,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("m2", type=float, help="Mass of heavy quark")
     parser.add_argument("nl", type=int, help="Number of light flavors")
+    parser.add_argument("--pdf", help="PDF set used for computing pp")
     args = parser.parse_args()
     m2_: float = float(args.m2)
     nl_: int = int(args.nl)
-    run(m2_, nl_)
+    # determine PDF
+    pdf_ = None
+    if args.pdf:
+        pdf_ = args.pdf
+    else:
+        pdf_ = PDFS[abs(nl_)].get(f"{m2_:.2f}")
+    if pdf_ is None or len(pdf_.strip()) <= 0:
+        raise ValueError("No PDF set given!")
+    run(m2_, nl_, pdf_)
 
 
 if __name__ == "__main__":
