@@ -9,16 +9,20 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 import MaunaKea
 
-GRID_PATH = pathlib.Path("toppp.pineappl.lz4")
 TOPPP_NF5_EXE = pathlib.Path(__file__).parents[3] / "top++2.0" / "top++"
 TOPPP_NF3_EXE = pathlib.Path(__file__).parents[3] / "top++2.0-c" / "top++"
+
+
+def grid_path(nl: int):
+    """MaunaKea output file name."""
+    return pathlib.Path(f"toppp-{nl}.pineappl.lz4")
 
 
 def compute_mauna_kea(nl: int, m: float, sqrt_s: int, pdf: str) -> None:
     """Compute MaunaKea numbers."""
     # init object
     mk = MaunaKea.MaunaKea(m * m, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
-    mk.intCfg.calls = 500000
+    mk.intCfg.calls = 50000
     mk.intCfg.verbosity = 3
     mk.setHadronicS(sqrt_s * sqrt_s)
     mk.setPDF(pdf, 0)
@@ -27,7 +31,7 @@ def compute_mauna_kea(nl: int, m: float, sqrt_s: int, pdf: str) -> None:
     int_out = mk.getIntegrationOutput()
     print(f"sigma_tot = {int_out.result:e} +- {int_out.error:e} [pb]\n")
     # save
-    mk.write(str(GRID_PATH))
+    mk.write(str(grid_path(nl)))
 
 
 TOPPP_CFG_TEMPLATE = Environment(
@@ -118,12 +122,12 @@ def compute_toppp_sv(
     df.to_csv("top++_sv.csv")
 
 
-def compare(pdf: str) -> None:
+def compare(nl: int, pdf: str) -> None:
     """Compare numbers."""
     # MaunaKea
     lhapdf.setVerbosity(0)
     central_pdf = lhapdf.mkPDF(pdf, 0)
-    grid = pineappl.grid.Grid.read(GRID_PATH)
+    grid = pineappl.grid.Grid.read(grid_path(nl))
     data = {}
     labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     for idx, ch in enumerate(labs):
@@ -159,13 +163,12 @@ def compare(pdf: str) -> None:
     print(diff)
 
 
-def compare_sv(pto: int, pdf: str, ch: str, abs_xi: float) -> None:
+def compare_sv(nl: int, pto: int, pdf: str, ch: str, abs_xi: float) -> None:
     """Compare SV numbers."""
     # MaunaKea
-    grid_path = pathlib.Path(GRID_PATH)
     lhapdf.setVerbosity(0)
     central_pdf = lhapdf.mkPDF(pdf, 0)
-    grid = pineappl.grid.Grid.read(grid_path)
+    grid = pineappl.grid.Grid.read(grid_path(nl))
     labs = ["gg", "qqbar", "qg", "qq", "qqbarprime", "qqprime"]
     lm = [False] * len(labs)
     lm[labs.index(ch)] = True
@@ -220,9 +223,9 @@ def main() -> None:
     elif mode == "top++-sv":
         compute_toppp_sv(nl, m, sqrt_s, pto, pdf, ch, abs_xi)
     elif mode == "compare":
-        compare(pdf)
+        compare(nl, pdf)
     elif mode == "compare-sv":
-        compare_sv(pto, pdf, ch, abs_xi)
+        compare_sv(nl, pto, pdf, ch, abs_xi)
     else:
         raise ValueError("unkown mode")
 
