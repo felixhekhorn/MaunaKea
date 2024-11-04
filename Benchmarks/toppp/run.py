@@ -10,6 +10,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 import MaunaKea
 
 TOPPP_NF5_EXE = pathlib.Path(__file__).parents[3] / "top++2.0" / "top++"
+TOPPP_NF4_EXE = pathlib.Path(__file__).parents[3] / "top++2.0-b" / "top++"
 TOPPP_NF3_EXE = pathlib.Path(__file__).parents[3] / "top++2.0-c" / "top++"
 
 
@@ -78,6 +79,8 @@ def run_toppp(
     # run
     if nl == 3:
         exe = TOPPP_NF3_EXE
+    elif nl == 4:
+        exe = TOPPP_NF4_EXE
     elif nl == 5:
         exe = TOPPP_NF5_EXE
     else:
@@ -205,15 +208,21 @@ def main() -> None:
     args = parser.parse_args()
 
     nl: int = int(args.nl)
-    m: float = 172.5
-    pdf = "NNPDF40_nnlo_as_01180"
     if nl == 3:
         m = 1.51
         pdf = "NNPDF40_nlo_pch_as_01180_nf_3"
+    elif nl == 4:
+        m = 4.92
+        pdf = "NNPDF40_nnlo_as_01180_nf_4"
+    elif nl == 5:
+        m = 172.5
+        pdf = "NNPDF40_nnlo_as_01180"
+    else:
+        raise ValueError(f"{nl=} is not available")
     sqrt_s: float = 7e3
     mode: str = args.mode.strip().lower()
-    pto: int = 2
-    ch: str = "qg"
+    pto: int = 1
+    ch: str = "gg"
     abs_xi: float = 2.0
 
     if mode == "maunakea":
