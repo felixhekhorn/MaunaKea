@@ -94,27 +94,27 @@ PDFS = {
 
 MSHT20_MCRANGE = [1.4, 1.2, 1.25, 1.3, 1.35, 1.45, 1.5, 1.55]
 """Charm mass range in MSHT20."""
-for j_, m2_ in enumerate(MSHT20_MCRANGE[1:]):
-    PDFS[3][f"{m2_:.2f}"] = f"MSHT20nnlo_mcrange_nf3/{j_+1}"
+for j_, msht_mc in enumerate(MSHT20_MCRANGE[1:]):
+    PDFS[3][f"{msht_mc:.2f}"] = f"MSHT20nnlo_mcrange_nf3/{j_+1}"
 
 MSHT20_MBRANGE = [4.75, 4.0, 4.25, 4.5, 5.0, 5.25, 5.5]
 """Bottom mass range in MSHT20."""
-for j_, m2_ in enumerate(MSHT20_MBRANGE[1:]):
-    PDFS[4][f"{m2_:.2f}"] = f"MSHT20nnlo_mbrange_nf4/{j_+1}"
+for j_, msht_mb in enumerate(MSHT20_MBRANGE[1:]):
+    PDFS[4][f"{msht_mb:.2f}"] = f"MSHT20nnlo_mbrange_nf4/{j_+1}"
 
 
-def subgrid_path(m2: float, nf: int, j: int) -> str:
+def subgrid_path(mass: float, nf: int, j: int) -> str:
     """Return grid path for single configuration."""
-    return f"subgrids/{LABELS[nf]}-{m2:.2f}-{j}.pineappl.lz4"
+    return f"subgrids/{LABELS[nf]}-{mass:.2f}-{j}.pineappl.lz4"
 
 
-def grid_path(m2: float, nf: int) -> str:
+def grid_path(mass: float, nf: int) -> str:
     """Return combined grid path."""
-    return f"{LABELS[nf]}-{m2:.2f}.pineappl.lz4"
+    return f"{LABELS[nf]}-{mass:.2f}.pineappl.lz4"
 
 
 def compute(
-    ndata: int, m2: float, nl: int, pdf: str, processes: int = 1, quick: bool = False
+    ndata: int, mass: float, nl: int, pdf: str, processes: int = 1, quick: bool = False
 ) -> None:
     """Compute grids."""
     # determine energy range
@@ -127,11 +127,13 @@ def compute(
     if processes <= 0:
         processes = max(os.cpu_count() + processes, 1)
     start = time.perf_counter()
-    print(f"Computing with m2={m2}, nl={abs(nl)}, pdf={pdf} using {processes} threads")
+    print(
+        f"Computing with mass={mass} GeV, nl={abs(nl)}, pdf={pdf} using {processes} threads"
+    )
     args = zip(
         range(ndata),
         [ndata] * ndata,
-        [m2] * ndata,
+        [mass] * ndata,
         [nl] * ndata,
         sh_range,
         [pdf] * ndata,
@@ -154,14 +156,14 @@ def compute(
 
 
 def compute_subgrid(
-    j: int, ndata: int, m2: float, nl: int, sh: float, pdf: str, quick: bool
+    j: int, ndata: int, mass: float, nl: int, sh: float, pdf: str, quick: bool
 ) -> None:
     """Compute a subgrid."""
     print(f"j = {j:d}/{ndata:d}, S = {sh:e} GeV^2")
     lhapdf.setVerbosity(0)
     start = time.perf_counter()
     # init object
-    mk = MaunaKea.MaunaKea(m2, abs(nl), MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
+    mk = MaunaKea.MaunaKea(mass * mass, abs(nl), MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
     mk.intCfg.calls = 5000 if quick else CALLS
     mk.setHadronicS(sh)
     mk.setPDF(pdf)
@@ -173,17 +175,17 @@ def compute_subgrid(
     print(f"sigma_tot = {int_out.result:e} +- {int_out.error:e} [pb]")
     print(f"took {delta:.2f} s and chi2iter={int_out.chi2iter}")
     # save
-    mk.write(subgrid_path(m2, nl, j))
+    mk.write(subgrid_path(mass, nl, j))
 
 
-def merge(ndata: int, m2: float, nl: int) -> None:
+def merge(ndata: int, mass: float, nl: int) -> None:
     """Merge grids."""
     # merge grids according to their c.o.m. energy
     base = None
     if nl < 0:
         ndata = len(DATA[abs(nl)])
     for j in range(ndata):
-        subgrid_path_ = pathlib.Path(subgrid_path(m2, nl, j))
+        subgrid_path_ = pathlib.Path(subgrid_path(mass, nl, j))
         grid = pineappl.grid.Grid.read(subgrid_path_)
         # rebin by S_h
         sqrt_sh = np.sqrt(float(grid.key_values()["MaunaKea::hadronicS"]))
@@ -204,7 +206,7 @@ def merge(ndata: int, m2: float, nl: int) -> None:
     base.set_key_value("y_label_tex", r"\sigma_{tot}")
     base.set_key_value("y_unit", "µb")
     # save back to disk
-    merged_path = pathlib.Path(grid_path(m2, nl))
+    merged_path = pathlib.Path(grid_path(mass, nl))
     print(f"Write combined grid to {merged_path}")
     base.write_lz4(merged_path)
 
@@ -212,7 +214,7 @@ def merge(ndata: int, m2: float, nl: int) -> None:
 def cli() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("m2", help="Mass of heavy quark")
+    parser.add_argument("mass", help="Mass of heavy quark")
     parser.add_argument("nl", help="Number of light flavors")
     parser.add_argument("ndata", help="Number of points")
     parser.add_argument("-c", "--compute", help="Compute grids", action="store_true")
@@ -224,21 +226,23 @@ def cli() -> None:
     parser.add_argument("--quick", help="Use low statistics", action="store_true")
     # prepare args
     args = parser.parse_args()
-    m2_: float = float(args.m2)
+    mass_: float = float(args.mass)
     nl_: int = int(args.nl)
     # determine PDF
     pdf_ = None
     if args.pdf:
         pdf_ = args.pdf
     else:
-        pdf_ = PDFS[abs(nl_)].get(f"{m2_:.2f}")
+        pdf_ = PDFS[abs(nl_)].get(f"{mass_:.2f}")
     if pdf_ is None or len(pdf_.strip()) <= 0:
         raise ValueError("No PDF set given!")
     # do something
     if args.compute:
-        compute(int(args.ndata), m2_, nl_, pdf_, int(args.processes), bool(args.quick))
+        compute(
+            int(args.ndata), mass_, nl_, pdf_, int(args.processes), bool(args.quick)
+        )
     if args.merge:
-        merge(int(args.ndata), m2_, nl_)
+        merge(int(args.ndata), mass_, nl_)
 
 
 if __name__ == "__main__":
