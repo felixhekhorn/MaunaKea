@@ -5,7 +5,6 @@ import os
 import pathlib
 import time
 from dataclasses import dataclass
-from multiprocessing import Pool
 from typing import Optional
 
 import lhapdf
@@ -115,7 +114,7 @@ def grid_path(m2: float, nf: int) -> str:
 
 
 def compute(
-    ndata: int, m2: float, nl: int, pdf: str, processes: int = -1, quick: bool = False
+    ndata: int, m2: float, nl: int, pdf: str, processes: int = 1, quick: bool = False
 ) -> None:
     """Compute grids."""
     # determine energy range
@@ -124,24 +123,31 @@ def compute(
         ndata = len(sh_range)
     else:
         sh_range = np.geomspace(SH_MIN, SH_MAX, ndata)
-    # parallelize
+    # parallelize if requested
     if processes <= 0:
         processes = max(os.cpu_count() + processes, 1)
     start = time.perf_counter()
     print(f"Computing with m2={m2}, nl={abs(nl)}, pdf={pdf} using {processes} threads")
-    with Pool(processes) as p:
-        p.starmap(
-            compute_subgrid,
-            zip(
-                range(ndata),
-                [ndata] * ndata,
-                [m2] * ndata,
-                [nl] * ndata,
-                sh_range,
-                [pdf] * ndata,
-                [quick] * ndata,
-            ),
-        )
+    args = zip(
+        range(ndata),
+        [ndata] * ndata,
+        [m2] * ndata,
+        [nl] * ndata,
+        sh_range,
+        [pdf] * ndata,
+        [quick] * ndata,
+    )
+    if processes > 1:
+        from multiprocessing import Pool  # pylint: disable=import-outside-toplevel
+
+        with Pool(processes) as p:
+            p.starmap(
+                compute_subgrid,
+                args,
+            )
+    else:
+        for arg in args:
+            compute_subgrid(*arg)
     delta = time.perf_counter() - start
     print("---")
     print(f"computed {ndata} grids in {delta/60:.2f} min")
