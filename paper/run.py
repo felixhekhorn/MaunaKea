@@ -221,7 +221,7 @@ def cli() -> None:
     parser.add_argument("-m", "--merge", help="Merge grids", action="store_true")
     parser.add_argument("--pdf", help="PDF set used for computing")
     parser.add_argument(
-        "--processes", default=-1, help="Number of parallel threads for computing"
+        "--processes", default=1, help="Number of parallel threads for computing"
     )
     parser.add_argument("--quick", help="Use low statistics", action="store_true")
     # prepare args
