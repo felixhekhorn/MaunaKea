@@ -764,7 +764,9 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
     ax.legend()
     fig.tight_layout()
     sr_suffix = "-sr" if short_range else ""
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi{extra.suffix}{sr_suffix}.pdf")
+    fig.savefig(
+        f"plots/{LABELS[nl]}-{m2str(m2)}-{pdf}-lumi{extra.suffix}{sr_suffix}.pdf"
+    )
 
 
 def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
