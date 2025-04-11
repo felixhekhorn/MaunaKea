@@ -52,6 +52,11 @@ mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
 )
 
 
+def m2str(m2: float) -> str:
+    """Sanitize `.` to `p` for overleaf."""
+    return f"{m2:.2f}".replace(".", "p")
+
+
 def extract_sv_by_order(
     grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
 ) -> pd.DataFrame:
@@ -588,7 +593,9 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
         )
     fig.tight_layout()
     sr_suffix = "-sr" if short_range else ""
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto{extra.suffix}{sr_suffix}.pdf")
+    fig.savefig(
+        f"plots/{LABELS[nl]}-{m2str(m2)}-{pdf}-pto{extra.suffix}{sr_suffix}.pdf"
+    )
 
 
 def xmean_pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
