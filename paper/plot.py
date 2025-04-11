@@ -531,7 +531,7 @@ def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
 
 
 # restrict sqrt(s) if requested
-SHORT_RANGE_MAX: float = 14e3
+SHORT_RANGE_MAX: float = 20e3
 
 
 def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
@@ -540,47 +540,52 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     dfs = load_pto(m2, nl, pdf, extra)
 
     # plot bare
-    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
+    fig, axs = plt.subplots(3, 1, height_ratios=[1, 0.35, 0.35], sharex=True)
+    axP = axs[0]
     for k, lab in [(0, "LO"), (1, "NLO"), (2, "NNLO")]:
         df = dfs[k]
-        axs[0].fill_between(df["sqrt_s"], df["sv_min"], df["sv_max"], alpha=0.4)
-        axs[0].plot(df["sqrt_s"], df["central"], label=lab)
-        axs[0].set_xlim(
+        axP.fill_between(df["sqrt_s"], df["sv_min"], df["sv_max"], alpha=0.4)
+        axP.plot(df["sqrt_s"], df["central"], label=lab)
+        axP.set_xlim(
             df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
         )
-    axs[0].set_xscale("log")
-    axs[0].set_yscale("log")
-    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
-    axs[0].tick_params(
-        "both",
-        which="both",
-        direction="in",
-        bottom=True,
-        top=True,
-        left=True,
-        right=True,
-    )
-    add_xmin(m2, axs[0])
-    axs[0].legend()
-    # plot K-factor
-    axs[1].plot([])  # add empty plot to align colors
-    for k1, k2, lab in [(1, 0, "NLO/LO"), (2, 1, "NNLO/NLO")]:
-        axs[1].plot(
-            dfs[k1]["sqrt_s"], dfs[k1]["central"] / dfs[k2]["central"], label=lab
+    axP.set_xscale("log")
+    axP.set_yscale("log")
+    axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    add_xmin(m2, axP)
+    axP.legend()
+    # plot uncertainty
+    axU = axs[1]
+    for k, lab in [(0, "LO"), (1, "NLO"), (2, "NNLO")]:
+        df = dfs[k]
+        axU.plot(
+            df["sqrt_s"],
+            np.max([df["central"] - df["sv_min"], df["sv_max"] - df["central"]], 0)
+            / df["central"],
+            label=lab,
         )
-    axs[1].set_ylim(1.0, 4.0)
-    axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
-    axs[1].set_ylabel(r"K factor")
-    axs[1].tick_params(
-        "both",
-        which="both",
-        direction="in",
-        bottom=True,
-        top=True,
-        left=True,
-        right=True,
-    )
-    axs[1].legend()
+    if nl == 3:  # There seems to be a spike somewhere
+        axU.set_ylim(0.5, 3.0)
+    axU.set_ylabel("rel. Unc.")
+    # plot K-factor
+    axK = axs[2]
+    axK.plot([])  # add empty plot to align colors
+    for k1, k2, lab in [(1, 0, "NLO/LO"), (2, 1, "NNLO/NLO")]:
+        axK.plot(dfs[k1]["sqrt_s"], dfs[k1]["central"] / dfs[k2]["central"], label=lab)
+    axK.set_ylim(1.0, 3.1)
+    axK.set_xlabel(r"$\sqrt{s}$ [GeV]")
+    axK.set_ylabel(r"K factor")
+    axK.legend()
+    for ax in axs:
+        ax.tick_params(
+            "both",
+            which="both",
+            direction="in",
+            bottom=True,
+            top=True,
+            left=True,
+            right=True,
+        )
     fig.tight_layout()
     sr_suffix = "-sr" if short_range else ""
     fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-pto{extra.suffix}{sr_suffix}.pdf")
