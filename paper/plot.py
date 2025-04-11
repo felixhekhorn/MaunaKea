@@ -783,15 +783,16 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
-    axs[0].fill_between(df["sqrt_s"], df["min"], df["max"], alpha=0.4)
-    axs[0].plot(df["sqrt_s"], df["0"], label=label)
-    axs[0].set_xlim(
+    axP = axs[0]
+    axP.fill_between(df["sqrt_s"], df["min"], df["max"], alpha=0.4)
+    axP.plot(df["sqrt_s"], df["0"], label=label)
+    axP.set_xlim(
         df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
     )
-    axs[0].set_xscale("log")
-    axs[0].set_yscale("log")
-    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
-    axs[0].tick_params(
+    axP.set_xscale("log")
+    axP.set_yscale("log")
+    axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    axP.tick_params(
         "both",
         which="both",
         direction="in",
@@ -800,18 +801,18 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
         left=True,
         right=True,
     )
-    axs[0].legend()
+    axP.legend(loc="lower right")
     # plot rel. uncertainty
-    axs[1].fill_between(
-        df["sqrt_s"], df["min"] / df["0"], df["max"] / df["0"], alpha=0.4
-    )
-    axs[1].plot(df["sqrt_s"], np.ones(len(df["0"])))
-    axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
-    axs[1].set_ylabel(r"rel. uncertainty")
-    axs[1].set_ylim(0.4, 2.1)
-    axs[1].set_yticks(np.arange(0.5, 2.1, 0.5))
-    axs[1].set_yticks(np.arange(0.5, 2.1, 0.1), minor=True)
-    axs[1].tick_params(
+    axU = axs[1]
+    axU.fill_between(df["sqrt_s"], df["min"] / df["0"], df["max"] / df["0"], alpha=0.4)
+    axU.plot(df["sqrt_s"], np.ones(len(df["0"])))
+    axU.set_xlabel(r"$\sqrt{s}$ [GeV]")
+    axU.set_ylabel(r"rel. Unc.")
+    axU.set_ylim(1.0 / 2.1, 2.1)
+    axU.set_yscale("log")
+    axU.set_yticks(np.geomspace(0.5, 2.0, 3), ["0.5", "1.0", "2.0"])
+    axU.set_yticks(np.geomspace(0.5, 2.0, 5), [], minor=True)
+    axU.tick_params(
         "both",
         which="both",
         direction="in",
