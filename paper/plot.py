@@ -417,7 +417,8 @@ def pdf_obs(m2: float, nl: int, extra: Extrapolation) -> None:
         conv,
         f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
     )
-    fig.axes[0].set_ylim(10, 2e5)
+    if nl == 3:
+        fig.axes[0].set_ylim(10, 2e5)
     fig.savefig(path)
 
 
