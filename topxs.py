@@ -16,7 +16,7 @@ def grid(m2: float, S_h: float, path: str) -> None:
     """Compute a single grid."""
     nl: int = 5  # number of light flavors
     # init object
-    mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_NNLO, MaunaKea.LUMI_ALL)
+    mk = MaunaKea.MaunaKea(m2, nl, MaunaKea.ORDER_ALL, MaunaKea.LUMI_ALL)
     # configure
     # mk.intCfg.calls = 5000
     mk.intCfg.verbosity = 3
