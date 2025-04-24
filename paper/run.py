@@ -51,7 +51,7 @@ DATA: dict[int, list[ExpConfig]] = {
         ExpConfig("11", 13e3),
     ],
     4: [
-        # ExpConfig("89", 0.0387e3, A["S"]), !no EPPS PDFs for S!
+        ExpConfig("89", 0.0387e3, A["S"]),
         ExpConfig("90", 0.0387e3, A["Au"]),
         ExpConfig("88", 0.0416e3),
         ExpConfig("43,84", 0.2e3),
