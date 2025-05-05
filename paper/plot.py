@@ -260,7 +260,7 @@ def load_pdf(
         pdf_vals = np.array(pdf_vals)
         df = pd.DataFrame()
         df["sqrt_s"] = grid.bin_left(0)
-        # add exception for for CT18NNLO_NF*
+        # add exception for CT18NNLO_NF*
         if len(pdfs) == 1:
             df["central"] = pdf_vals[0]
             df["pdf_minus"] = pdf_vals[0]
@@ -310,7 +310,7 @@ def pdf_raw(
 ) -> Tuple[mpl.figure.Figure, str]:
     """Plot PDF dependence."""
     # load data
-    elems = to_elems(m2, nl)
+    elems = to_elems(m2, abs(nl))
     mass_label = f"{m2:.2f}-" if m2 > 0.0 else ""
 
     # collect datapoints
@@ -415,7 +415,7 @@ def pdf_obs(m2: float, nl: int, extra: Extrapolation) -> None:
         nl,
         "pdf" + extra.suffix,
         conv,
-        f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]",
+        f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]",
     )
     if nl == 3:
         fig.axes[0].set_ylim(10, 2e5)
@@ -557,7 +557,7 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
         )
     axP.set_xscale("log")
     axP.set_yscale("log")
-    axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
     add_xmin(m2, axP)
     axP.legend()
     # plot uncertainty
@@ -615,7 +615,7 @@ def xmean_pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
         axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
-    axs[0].set_ylabel(f"$\\langle x \\rangle_{{{TEX_LABELS[nl]}}}$")
+    axs[0].set_ylabel(f"$\\langle x \\rangle_{{{TEX_LABELS[abs(nl)]}}}$")
     axs[0].tick_params(
         "both",
         which="both",
@@ -683,7 +683,7 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
         axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
-    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    axs[0].set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
     axs[0].tick_params(
         "both",
         which="both",
@@ -780,7 +780,7 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
         m2s = MSHT20_MBRANGE
         pdf = "MSHT20nnlo_mbrange_nf4"
     df = load_mass(m2s, nl, pdf, extra)
-    label = f"{pdf} $m_{TEX_LABELS[nl][0]}={min(m2s):.2f} - {max(m2s):.2f}$ GeV"
+    label = f"{pdf} $m_{TEX_LABELS[abs(nl)][0]}={min(m2s):.2f} - {max(m2s):.2f}$ GeV"
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
@@ -792,7 +792,7 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     )
     axP.set_xscale("log")
     axP.set_yscale("log")
-    axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[nl]}}}$ [µb]")
+    axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
     axP.tick_params(
         "both",
         which="both",
@@ -886,7 +886,7 @@ def main() -> None:
     if m2_ > 0:
         pdf = PDFS[nl_][f"{m2_:.2f}"]
     else:
-        m2_, pdf = to_elems(m2_, nl_)[0]
+        m2_, pdf = to_elems(m2_, abs(nl_))[0]
         pdf = pdf[0]
     if args.pdf_set:
         pdf = args.pdf_set
