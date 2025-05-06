@@ -29,6 +29,13 @@ class ExpConfig:
 A: dict[str, int] = {"S": 32, "Au": 197, "Pb": 208}
 """Map element names to their closest integer A."""
 
+_PINEAPPL_BIN_HACK = 1.0 + 1e-6
+"""Ugly hack as a temporary fix.
+
+TODO: There is currently a bug with PineAPPL: since we merge all subgrids,
+back into one grid, we get bins with identical bin limits.
+PineAPPL sums their convolution into the first bin, which is wrong - to be fixed."""
+
 DATA: dict[int, list[ExpConfig]] = {
     3: [
         ExpConfig("55", 0.0116e3),  # 0.0114e3 -> 0.0116e3 SVD2
@@ -40,7 +47,9 @@ DATA: dict[int, list[ExpConfig]] = {
         ExpConfig("90", 0.0387e3, A["Au"]),  # ADD E789
         ExpConfig("48", 0.0389e3),  # OK E653
         ExpConfig("47", 0.0416e3),  # OK HERA-B
-        ExpConfig("88", 0.0416e3, A["Au"]),  # ADD HERA-B (p-Ti, p-W = p-Au?)
+        ExpConfig(
+            "88", 0.0416e3 * _PINEAPPL_BIN_HACK, A["Au"]
+        ),  # ADD HERA-B (p-Ti, p-W = p-Au?)
         ExpConfig("46", 0.0685e3),  # OK LHCb (p-Ne = p-p ?)
         ExpConfig("??", 0.0866e3),  # ADD LHCb (p-H = p-p)
         ExpConfig("37,41,42,44", 0.2e3),  # OK
@@ -48,13 +57,13 @@ DATA: dict[int, list[ExpConfig]] = {
         ExpConfig("19", 2.76e3),  # OK
         ExpConfig("31", 5e3),  # OK
         ExpConfig("20,32,92", 5.02e3, A["Pb"]),  # OK
-        ExpConfig("94,97,98", 5.02e3),  # OK
+        ExpConfig("94,97,98", 5.02e3 * _PINEAPPL_BIN_HACK),  # OK
         ExpConfig("15,17,21,23", 7e3),  # OK
         ExpConfig("11", 13e3),  # OK
     ],
     4: [
         ExpConfig("89", 0.0387e3, A["S"]),
-        ExpConfig("90", 0.0387e3, A["Au"]),
+        ExpConfig("90", 0.0387e3 * _PINEAPPL_BIN_HACK, A["Au"]),
         ExpConfig("88", 0.0416e3),
         ExpConfig("43,84", 0.2e3),
         ExpConfig("82", 0.51e3),
