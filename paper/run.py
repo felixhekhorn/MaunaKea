@@ -31,24 +31,26 @@ A: dict[str, int] = {"S": 32, "Au": 197, "Pb": 208}
 
 DATA: dict[int, list[ExpConfig]] = {
     3: [
-        ExpConfig("55", 0.0114e3),
-        ExpConfig("48", 0.0217e3),
-        ExpConfig("48", 0.026e3),
-        ExpConfig("48", 0.0274e3),
-        ExpConfig("48", 0.0289e3),
-        ExpConfig("48", 0.0389e3),
-        ExpConfig("47", 0.0416e3),
-        ExpConfig("46", 0.0685e3),
-        ExpConfig("45,55", 0.1104e3),
-        ExpConfig("37,41,42,44", 0.2e3),
-        ExpConfig("34", 1.96e3),
-        ExpConfig("19", 2.76e3),
-        ExpConfig("31", 5e3),
-        ExpConfig("20,32,92", 5e3, A["Pb"]),
-        ExpConfig("94,97,98", 5.02e3),
-        ExpConfig("15,17,21,23", 7e3),
-        ExpConfig("93,95", 8.16e3, A["Pb"]),
-        ExpConfig("11", 13e3),
+        ExpConfig("55", 0.0116e3),  # 0.0114e3 -> 0.0116e3 SVD2
+        ExpConfig("48", 0.0195e3),  # ADD NA32
+        ExpConfig("48", 0.0217e3),  # OK E769
+        ExpConfig("48", 0.026e3),  # OK NA16
+        ExpConfig("48", 0.0274e3),  # OK NA27
+        ExpConfig("48", 0.0289e3),  # OK NA50
+        ExpConfig("90", 0.0387e3, A["Au"]),  # ADD E789
+        ExpConfig("48", 0.0389e3),  # OK E653
+        ExpConfig("47", 0.0416e3),  # OK HERA-B
+        ExpConfig("88", 0.0416e3, A["Au"]),  # ADD HERA-B (p-Ti, p-W = p-Au?)
+        ExpConfig("46", 0.0685e3),  # OK LHCb (p-Ne = p-p ?)
+        ExpConfig("??", 0.0866e3),  # ADD LHCb (p-H = p-p)
+        ExpConfig("37,41,42,44", 0.2e3),  # OK
+        ExpConfig("34", 1.96e3, -1),  # OK, but p-pbar (not p-p)
+        ExpConfig("19", 2.76e3),  # OK
+        ExpConfig("31", 5e3),  # OK
+        ExpConfig("20,32,92", 5.02e3, A["Pb"]),  # OK
+        ExpConfig("94,97,98", 5.02e3),  # OK
+        ExpConfig("15,17,21,23", 7e3),  # OK
+        ExpConfig("11", 13e3),  # OK
     ],
     4: [
         ExpConfig("89", 0.0387e3, A["S"]),
@@ -59,7 +61,6 @@ DATA: dict[int, list[ExpConfig]] = {
         ExpConfig("80", 0.63e3, -1),
         ExpConfig("77", 1.96e3),
         ExpConfig("76", 2.76e3),
-        ExpConfig("75", 5.02e3, A["Pb"]),
         ExpConfig("15,16,56", 7e3),
         ExpConfig("56", 13e3),
     ],
