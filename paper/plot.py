@@ -773,7 +773,7 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
 def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     """Plot mass dependency."""
     # prepare data
-    if nl == 3:
+    if abs(nl) == 3:
         m2s = MSHT20_MCRANGE
         pdf = "MSHT20nnlo_mcrange_nf3"
     else:
@@ -884,7 +884,7 @@ def main() -> None:
         mass(nl_, extra_, args.short_range)
     # single PDF plots
     if m2_ > 0:
-        pdf = PDFS[nl_][f"{m2_:.2f}"]
+        pdf = PDFS[abs(nl_)][f"{m2_:.2f}"]
     else:
         m2_, pdf = to_elems(m2_, abs(nl_))[0]
         pdf = pdf[0]
