@@ -730,23 +730,13 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
 
     # plot
     fig, ax = plt.subplots(1, 1)
-    for pto_, lab_pto, ls in [
-        (0, "LO", "dotted"),
-        (1, "NLO", "dashed"),
-        (2, "NNLO", "solid"),
-    ]:
+    for pto_, ls in [(0, "dotted"), (1, "dashed"), (2, "solid")]:
         df = dfs[pto_]
-        for lu, (raw_lab, plt_lab) in enumerate(
-            [("gg", "$gg$"), ("qqbar", r"$q\bar{q}$"), ("gq", "$gq$")]
-        ):
-            if raw_lab == "gg" or pto_ == 2:
-                lab = f"{plt_lab} ({lab_pto})"
-            else:
-                lab = None
+        for lu, raw_lab in enumerate(["gg", "qqbar", "gq"]):
             ax.plot(
                 df["sqrt_s"],
                 df[raw_lab] / df["total"] * 100,
-                label=lab,
+                label=" ",
                 color=f"C{lu}",
                 linestyle=ls,
             )
@@ -767,11 +757,26 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
         right=True,
     )
     add_xmin(m2, ax)
-    ax.legend()
+    # Fiddle with legend! Thanks https://stackoverflow.com/a/44072076
+    h, l = ax.get_legend_handles_labels()
+    empty = [plt.plot([], marker="", ls="")[0]]
+    handles = np.array(h).reshape(3, 3)
+    labels = np.array(l, dtype="U30").reshape(3, 3)
+    handles = np.insert(handles, 0, empty * 3, 0)
+    labels = np.insert(labels, 0, ["$gg$", r"$q\bar{q}$", "$gq$"], 0)
+    handles = np.insert(handles, 0, empty * 4, 1)
+    labels = np.insert(labels, 0, [" ", "LO", "NLO", "NNLO"], 1)
+    leg = ax.legend(handles.flatten(), labels.flatten(), ncol=4)
+    for vpack in leg._legend_handle_box.get_children():
+        for hpack in vpack.get_children():
+            hpack.get_children()[0].set_width(0)
+    for vpack in leg._legend_handle_box.get_children()[:1]:
+        for hpack in vpack.get_children():
+            hpack.get_children()[0].set_width(0)
     fig.tight_layout()
     sr_suffix = "-sr" if short_range else ""
     fig.savefig(
-        f"plots/{LABELS[nl]}-{m2str(m2)}-{pdf}-lumi{extra.suffix}{sr_suffix}.pdf"
+        f"plots/{LABELS[nl]}-{m2str(m2)}-{pdf.replace('/','__')}-lumi{extra.suffix}{sr_suffix}.pdf"
     )
 
 
