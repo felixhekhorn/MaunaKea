@@ -236,7 +236,9 @@ def load_lumi(
     dfs = {}
     for k in range(2 + 1):
         df = extract_lumis_by_order(grid, central_pdf, extra, k)
-        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-lumi-{k}{extra.suffix}.csv")
+        df.to_csv(
+            f"data/{LABELS[nl]}-{m2:.2f}-{pdf.replace('/','__')}-lumi-{k}{extra.suffix}.csv"
+        )
         dfs[k] = df
     return dfs
 
@@ -379,6 +381,9 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
                     m2,
                     [
                         "NNPDF40_nnlo_pch_as_01180_nf_3",
+                        # "NNPDF40_nnlo_as_01180",
+                        # "NNPDF31_nnlo_as_0118",
+                        # "NNPDF30_nnlo_as_0118",
                         "MSHT20nnlo_nf3",
                         "CT18NNLO_NF3",
                     ],
