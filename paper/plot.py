@@ -281,19 +281,24 @@ def load_pdf(
 
 
 def load_mass(
-    m2s: Collection[float], nl: int, pdf_set: str, extra: Extrapolation
+    ms: Collection[float], nl: int, pdf_set: str, extra: Extrapolation
 ) -> pd.DataFrame:
     """Load PDF data from a grid."""
     # prepare objects
     lhapdf.setVerbosity(0)
     df = pd.DataFrame()
     pdf_vals = []
-    for j, m2 in enumerate(m2s):
-        grid_path_ = pathlib.Path(grid_path(m2, nl))
+    m_central = (MSHT20_MCRANGE if abs(nl) == 3 else MSHT20_MBRANGE)[0]
+    for j, m in enumerate(ms):
+        grid_path_ = pathlib.Path(grid_path(m, nl))
         grid = pineappl.grid.Grid.read(grid_path_)
         pdf = lhapdf.mkPDF(pdf_set, j)
         df["sqrt_s"] = grid.bin_left(0)
-        vals = grid.convolute_with_one(2212, extra.masked_xfxQ2(pdf), pdf.alphasQ2)
+        # Fix µ to the central choice
+        xi = m_central / m
+        vals = grid.convolute_with_one(
+            2212, extra.masked_xfxQ2(pdf), pdf.alphasQ2, xi=[(xi, xi)]
+        )
         df[f"{j}"] = vals
         pdf_vals.append(vals)
     pdf_vals = np.array(pdf_vals)
@@ -784,13 +789,13 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     """Plot mass dependency."""
     # prepare data
     if abs(nl) == 3:
-        m2s = MSHT20_MCRANGE
+        ms = MSHT20_MCRANGE
         pdf = "MSHT20nnlo_mcrange_nf3"
     else:
-        m2s = MSHT20_MBRANGE
+        ms = MSHT20_MBRANGE
         pdf = "MSHT20nnlo_mbrange_nf4"
-    df = load_mass(m2s, nl, pdf, extra)
-    label = f"{pdf} $m_{TEX_LABELS[abs(nl)][0]}={min(m2s):.2f} - {max(m2s):.2f}$ GeV"
+    df = load_mass(ms, nl, pdf, extra)
+    label = f"{pdf}\n$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu={ms[0]:.2f}$ GeV"
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
