@@ -802,7 +802,7 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
         ms = MSHT20_MBRANGE
         pdf = "MSHT20nnlo_mbrange_nf4"
     df = load_mass(ms, nl, pdf, extra)
-    label = f"{pdf}\n$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu={ms[0]:.2f}$ GeV"
+    label = f"{pdf}\n$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}$ GeV"
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
