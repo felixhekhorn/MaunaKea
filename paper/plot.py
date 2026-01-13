@@ -390,25 +390,32 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
                         # "NNPDF31_nnlo_as_0118",
                         # "NNPDF30_nnlo_as_0118",
                         "MSHT20nnlo_nf3",
-                        "CT18NNLO_NF3",
+                        "CT18NNLO_rescaled_NF3",
                     ],
                 )
             ]
         elif nl == 4:
             elems = [
-                (m2, ["NNPDF40_nnlo_as_01180_nf_4", "MSHT20nnlo_nf4", "CT18NNLO_NF4"])
+                (
+                    m2,
+                    [
+                        "NNPDF40_nnlo_as_01180_nf_4",
+                        "MSHT20nnlo_nf4",
+                        "CT18NNLO_rescaled_NF4",
+                    ],
+                )
             ]
     else:  # use "dynamic" mass
         if nl == 3:
             elems = [
                 (1.51, ["NNPDF40_nnlo_pch_as_01180_nf_3"]),
                 (1.4, ["MSHT20nnlo_nf3"]),
-                (1.3, ["CT18NNLO_NF3"]),
+                (1.3, ["CT18NNLO_rescaled_NF3"]),
             ]
         elif nl == 4:
             elems = [
                 (4.92, ["NNPDF40_nnlo_as_01180_nf_4"]),
-                (4.75, ["MSHT20nnlo_nf4", "CT18NNLO_NF4"]),
+                (4.75, ["MSHT20nnlo_nf4", "CT18NNLO_rescaled_NF4"]),
             ]
     return elems
 
