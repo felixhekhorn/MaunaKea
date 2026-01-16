@@ -269,12 +269,18 @@ def load_pdf(
             df["pdf_plus"] = pdf_vals[0]
         else:  # use lhapdf to do the uncertainty math
             pdf_errs = []
-            for obs in pdf_vals.T:
-                # pdf_errs.append(pdf_set.uncertainty(obs,alternative=("NNPDF" in pdf_set_name)))
-                pdf_errs.append(pdf_set.uncertainty(obs))
-            df["central"] = list(map(lambda u: u.central, pdf_errs))
-            df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
-            df["pdf_plus"] = list(map(lambda u: u.central + u.errplus, pdf_errs))
+            # make exception for MSHT20nnlo_mXrange_nfY
+            if pdf_set.errorType == "unknown":
+                df["central"] = pdf_vals.mean(axis=0)
+                df["pdf_minus"] = pdf_vals.min(axis=0)
+                df["pdf_plus"] = pdf_vals.max(axis=0)
+            else:
+                for obs in pdf_vals.T:
+                    # pdf_errs.append(pdf_set.uncertainty(obs,alternative=("NNPDF" in pdf_set_name)))
+                    pdf_errs.append(pdf_set.uncertainty(obs))
+                df["central"] = list(map(lambda u: u.central, pdf_errs))
+                df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
+                df["pdf_plus"] = list(map(lambda u: u.central + u.errplus, pdf_errs))
         df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf_set_name}-{suffix}.csv")
         dfs[pdf_set_name] = df
 
@@ -393,6 +399,7 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
                         # "NNPDF31_nnlo_pch_as_0118",
                         "MSHT20nnlo_nf3",
                         "CT18NNLO_rescaled_NF3",
+                        # "MSHT20nnlo_mcrange_nf3"
                     ],
                 )
             ]
@@ -405,6 +412,7 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
                         # "NNPDF31_nnlo_as_0118_nf_4"
                         "MSHT20nnlo_nf4",
                         "CT18NNLO_rescaled_NF4",
+                        # "MSHT20nnlo_mbrange_nf4"
                     ],
                 )
             ]
