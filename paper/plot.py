@@ -270,6 +270,7 @@ def load_pdf(
         else:  # use lhapdf to do the uncertainty math
             pdf_errs = []
             for obs in pdf_vals.T:
+                # pdf_errs.append(pdf_set.uncertainty(obs,alternative=("NNPDF" in pdf_set_name)))
                 pdf_errs.append(pdf_set.uncertainty(obs))
             df["central"] = list(map(lambda u: u.central, pdf_errs))
             df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
@@ -389,6 +390,7 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
                         # "NNPDF40_nnlo_as_01180",
                         # "NNPDF31_nnlo_as_0118",
                         # "NNPDF30_nnlo_as_0118",
+                        # "NNPDF31_nnlo_pch_as_0118",
                         "MSHT20nnlo_nf3",
                         "CT18NNLO_rescaled_NF3",
                     ],
@@ -400,6 +402,7 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
                     m2,
                     [
                         "NNPDF40_nnlo_as_01180_nf_4",
+                        # "NNPDF31_nnlo_as_0118_nf_4"
                         "MSHT20nnlo_nf4",
                         "CT18NNLO_rescaled_NF4",
                     ],
