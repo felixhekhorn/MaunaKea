@@ -106,11 +106,16 @@ MSHT20_MCRANGE = [1.4, 1.2, 1.25, 1.3, 1.35, 1.45, 1.5, 1.55]
 """Charm mass range in MSHT20."""
 for j_, msht_mc in enumerate(MSHT20_MCRANGE[1:]):
     PDFS[3][f"{msht_mc:.2f}"] = f"MSHT20nnlo_mcrange_nf3/{j_+1}"
+# restrict to +-~10%
+del MSHT20_MCRANGE[1]
 
 MSHT20_MBRANGE = [4.75, 4.0, 4.25, 4.5, 5.0, 5.25, 5.5]
 """Bottom mass range in MSHT20."""
 for j_, msht_mb in enumerate(MSHT20_MBRANGE[1:]):
     PDFS[4][f"{msht_mb:.2f}"] = f"MSHT20nnlo_mbrange_nf4/{j_+1}"
+# restrict to +-~10%
+del MSHT20_MBRANGE[1]
+del MSHT20_MBRANGE[-1]
 
 
 def subgrid_path(mass: float, nf: int, j: int) -> str:
