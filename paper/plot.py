@@ -775,7 +775,7 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
         )
     ax.set_ylim(-25, 107)
     ax.set_xscale("log")
-    ax.set_ylabel(r"$\sigma^{ij}/\sigma^{tot}$ [%]")
+    ax.set_ylabel(rf"$\sigma^{{ij}}/\sigma^{{tot}}_{{{TEX_LABELS[abs(nl)]}}}$ [%]")
     ax.set_xlabel(r"$\sqrt{s}$ [GeV]")
     ax.tick_params(
         "both",
