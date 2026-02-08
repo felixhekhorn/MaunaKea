@@ -108,6 +108,7 @@ for j_, msht_mc in enumerate(MSHT20_MCRANGE[1:]):
     PDFS[3][f"{msht_mc:.2f}"] = f"MSHT20nnlo_mcrange_nf3/{j_+1}"
 # restrict to +-~10%
 del MSHT20_MCRANGE[1]
+PDFS[3]["1.65"] = "NNPDF40_nnlo_pch_as_01180_nf_3"
 
 MSHT20_MBRANGE = [4.75, 4.0, 4.25, 4.5, 5.0, 5.25, 5.5]
 """Bottom mass range in MSHT20."""

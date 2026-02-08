@@ -299,7 +299,7 @@ def load_mass(
     for j, m in enumerate(ms):
         grid_path_ = pathlib.Path(grid_path(m, nl))
         grid = pineappl.grid.Grid.read(grid_path_)
-        pdf = lhapdf.mkPDF(pdf_set, j)
+        pdf = lhapdf.mkPDF(pdf_set, 0)  # j)
         df["sqrt_s"] = grid.bin_left(0)
         # Fix µ to the central choice
         xi = m_central / m
@@ -814,11 +814,15 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     """Plot mass dependency."""
     # prepare data
     if abs(nl) == 3:
-        ms = MSHT20_MCRANGE
-        pdf = "MSHT20nnlo_mcrange_nf3"
+        ms = [1.51, 1.65, 1.35]
+        pdf = "NNPDF40_nnlo_pch_as_01180_nf_3"
+        # ms = MSHT20_MCRANGE
+        # pdf = "MSHT20nnlo_mcrange_nf3"
     else:
-        ms = MSHT20_MBRANGE
-        pdf = "MSHT20nnlo_mbrange_nf4"
+        ms = [4.92, 5.5, 4.5]
+        pdf = "NNPDF40_nnlo_as_01180_nf_4"
+        # ms = MSHT20_MBRANGE
+        # pdf = "MSHT20nnlo_mbrange_nf4"
     df = load_mass(ms, nl, pdf, extra)
     label = f"{pdf}\n$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}$ GeV"
 
