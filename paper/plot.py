@@ -814,15 +814,19 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     """Plot mass dependency."""
     # prepare data
     if abs(nl) == 3:
-        ms = [1.51, 1.65, 1.35]
-        pdf = "NNPDF40_nnlo_pch_as_01180_nf_3"
-        # ms = MSHT20_MCRANGE
-        # pdf = "MSHT20nnlo_mcrange_nf3"
+        # ms = [1.3, 1.15, 1.45]
+        # pdf = "CT18NNLO_rescaled_NF3"
+        # ms = [1.51, 1.65, 1.35]
+        # pdf = "NNPDF40_nnlo_pch_as_01180_nf_3"
+        ms = MSHT20_MCRANGE
+        pdf = "MSHT20nnlo_mcrange_nf3"
     else:
-        ms = [4.92, 5.5, 4.5]
-        pdf = "NNPDF40_nnlo_as_01180_nf_4"
-        # ms = MSHT20_MBRANGE
-        # pdf = "MSHT20nnlo_mbrange_nf4"
+        # ms = [4.75, 5.25, 4.25]
+        # pdf = "CT18NNLO_rescaled_NF4"
+        # ms = [4.92, 5.5, 4.5]
+        # pdf = "NNPDF40_nnlo_as_01180_nf_4"
+        ms = MSHT20_MBRANGE
+        pdf = "MSHT20nnlo_mbrange_nf4"
     df = load_mass(ms, nl, pdf, extra)
     label = f"{pdf}\n$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}$ GeV"
 
