@@ -618,6 +618,9 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     axK.set_ylabel(r"K factor")
     axK.legend()
     for ax in axs:
+        # axP has x_min ticks
+        if ax is axP:
+            continue
         ax.tick_params(
             "both",
             which="both",
