@@ -1,5 +1,7 @@
 """Rescale CT18NNLO to CT18NNLO_NFX."""
 
+import sys
+
 import lhapdf
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,15 +9,17 @@ from eko import basis_rotation as br
 from ekobox import genpdf
 
 # PDF names
-is_nf3 = True
-if is_nf3:
+nf = int(sys.argv[1])
+if nf == 3:
     src = "CT18NNLO_NF3"
     target = "CT18NNLO_rescaled_NF3"
     QGRID = """1.295000E+00  1.427963E+00  1.580461E+00  1.756032E+00  1.958966E+00  2.194492E+00  2.469009E+00  2.790390E+00  3.168365E+00  3.615021E+00  4.145456E+00  4.778626E+00  5.538466E+00  6.455378E+00  7.568206E+00  8.926888E+00  1.059604E+01  1.265985E+01  1.522869E+01  1.844839E+01  2.251299E+01  2.768267E+01  3.430907E+01  4.287129E+01  5.402774E+01  6.869109E+01  8.813811E+01  1.141718E+02  1.493630E+02  1.974150E+02  2.637183E+02  3.562047E+02  4.866779E+02  6.729087E+02  9.419779E+02  1.335673E+03  1.919320E+03  2.796426E+03  4.133301E+03  6.201071E+03  9.448425E+03  1.462958E+04  2.303299E+04  3.689701E+04  6.017856E+04  1.000000E+05""".split()
-else:
+elif nf == 4:
     src = "CT18NNLO_NF4"
     target = "CT18NNLO_rescaled_NF4"
     QGRID = """1.295000E+00  1.296247E+00  1.297497E+00  1.298747E+00  1.300000E+00  1.433559E+00  1.586746E+00  1.763113E+00  1.966971E+00  2.203575E+00  2.479353E+00  2.802216E+00  3.181938E+00  3.630665E+00  4.163562E+00  4.799675E+00  5.563048E+00  6.484222E+00  7.602215E+00  8.967190E+00  1.064405E+01  1.271734E+01  1.529792E+01  1.853223E+01  2.261512E+01  2.780783E+01  3.446339E+01  4.306278E+01  5.426687E+01  6.899168E+01  8.851849E+01  1.146563E+02  1.499845E+02  1.982176E+02  2.647618E+02  3.575703E+02  4.884763E+02  6.752914E+02  9.451517E+02  1.339920E+03  1.925022E+03  2.804090E+03  4.143590E+03  6.214805E+03  9.466527E+03  1.465285E+04  2.306151E+04  3.692863E+04  6.020532E+04  1.000000E+05""".split()
+else:
+    raise ValueError("pass nf (=3 or 4) as argument")
 # load
 central = lhapdf.mkPDF(src, 0)
 errs = lhapdf.mkPDFs("CT18NNLO")
@@ -39,6 +43,10 @@ def my_take_data(
     info = None
     heads = []
     info = genpdf.load.load_info_from_file("CT18NNLO")
+    # carry alpha_s over
+    src_info = genpdf.load.load_info_from_file(src)
+    info["AlphaS_Qs"] = src_info["AlphaS_Qs"]
+    info["AlphaS_Vals"] = src_info["AlphaS_Vals"]
     for mem in errs:
         all_blocks.append(
             [
@@ -93,4 +101,4 @@ def plot():
     fig.savefig("CT18hack.pdf")
 
 
-plot()
+# plot()

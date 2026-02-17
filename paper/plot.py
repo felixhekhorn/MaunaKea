@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pineappl
+from eko.couplings import Couplings
+from eko.quantities.couplings import CouplingEvolutionMethod, CouplingsInfo
+from eko.quantities.heavy_quarks import QuarkMassScheme
 from scipy.integrate import quad
 
 from run import LABELS, MSHT20_MBRANGE, MSHT20_MCRANGE, PDFS, grid_path
@@ -880,8 +883,173 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     fig.savefig(f"plots/{LABELS[nl]}-mass{extra.suffix}{sr_suffix}.pdf")
 
 
-def alphas(m: float, nl: int, pdf: str, extra: Extrapolation) -> None:
+def _alphas_nnpdf(
+    grid: pineappl.grid.Grid, pdf: str, extra: Extrapolation
+) -> pd.DataFrame:
+    """Collect NNPDF alpha_s dependency"""
+    return _alphas_from_lhapdf(
+        grid,
+        pdf,
+        "NNPDF40_nnlo_as_01180",
+        "NNPDF40_nnlo_as_01190",
+        "NNPDF40_nnlo_as_01170",
+        extra,
+    )
+
+
+def _alphas_ct(
+    grid: pineappl.grid.Grid, pdf: str, extra: Extrapolation
+) -> pd.DataFrame:
+    """Collect CT18 alpha_s dependency"""
+    return _alphas_from_lhapdf(
+        grid, pdf, "CT18NNLO", "CT18NNLO_as_0119", "CT18NNLO_as_0117", extra
+    )
+
+
+def _alphas_from_lhapdf(
+    grid: pineappl.grid.Grid,
+    pdf: str,
+    fake_central_name: str,
+    fake_up_name: str,
+    fake_down_name: str,
+    extra: Extrapolation,
+) -> pd.DataFrame:
+    central_pdf = lhapdf.mkPDF(pdf, 0)
+    central = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(central_pdf),
+        central_pdf.alphasQ2,
+    )
+    fake_central_pdf = lhapdf.mkPDF(fake_central_name, 0)
+    fake_central = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(fake_central_pdf),
+        fake_central_pdf.alphasQ2,
+    )
+    fake_up_pdf = lhapdf.mkPDF(fake_up_name, 0)
+    fake_up = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(fake_up_pdf),
+        fake_up_pdf.alphasQ2,
+    )
+    fake_down_pdf = lhapdf.mkPDF(fake_down_name, 0)
+    fake_down = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(fake_down_pdf),
+        fake_down_pdf.alphasQ2,
+    )
+    df = pd.DataFrame()
+    df["sqrt_s"] = grid.bin_left(0)
+    df["central"] = central
+    df["up"] = fake_up / fake_central * central
+    df["down"] = fake_down / fake_central * central
+    df["fake_central"] = fake_central
+    df["fake_up"] = fake_up
+    df["fake_down"] = fake_down
+    return df
+
+
+def _alphas_msht(
+    m: float, nl: int, grid: pineappl.grid.Grid, pdf: str, extra: Extrapolation
+) -> pd.DataFrame:
+    """Collect MSHT alpha_s dependency"""
+
+    def mk_sc(alphas: float) -> Couplings:
+        return Couplings(
+            CouplingsInfo(alphas=alphas, alphaem=0.007496252, ref=(91.1876, 5)),
+            order=(3, 0),
+            method=CouplingEvolutionMethod.EXACT,
+            masses=np.power([1.4, 4.75, 1e10], 2),
+            hqm_scheme=QuarkMassScheme.POLE,
+            thresholds_ratios=np.array([1.0, 1.0, 1.0]),
+        )
+
+    central_pdf = lhapdf.mkPDF(pdf, 0)
+    central = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(central_pdf),
+        central_pdf.alphasQ2,
+    )
+    sc_down = mk_sc(0.117)
+    down_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{nl}", 1)
+    down = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(down_pdf),
+        lambda q2: 4.0 * np.pi * sc_down.a_s(q2, nf_to=nl),
+    )
+    sc_up = mk_sc(0.119)
+    up_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{nl}", 2)
+    up = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(up_pdf),
+        lambda q2: 4.0 * np.pi * sc_up.a_s(q2, nf_to=nl),
+    )
+    df = pd.DataFrame()
+    df["sqrt_s"] = grid.bin_left(0)
+    df["central"] = central
+    df["up"] = up
+    df["down"] = down
+    return df
+
+
+def alphas(
+    m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool
+) -> None:
     """Plot alpha_s dependency"""
+    # load data
+    grid_path_ = pathlib.Path(grid_path(m, nl))
+    lhapdf.setVerbosity(0)
+    grid = pineappl.grid.Grid.read(grid_path_)
+    if "NNPDF" in pdf:
+        df = _alphas_nnpdf(grid, pdf, extra)
+    elif "CT" in pdf:
+        df = _alphas_ct(grid, pdf, extra)
+    elif "MSHT" in pdf:
+        df = _alphas_msht(m, nl, grid, pdf, extra)
+    else:
+        raise ValueError("Could not determine alpha_s uncertainty type")
+    # save
+    df.to_csv(f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf.replace('/','__')}-alphas.csv")
+
+    # plot bare
+    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
+    axP = axs[0]
+    axP.fill_between(df["sqrt_s"], df["down"], df["up"], alpha=0.4)
+    axP.plot(df["sqrt_s"], df["central"], label=r"$\alpha_s = 0.118 \pm 0.001$")
+    axP.set_xlim(
+        df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
+    )
+    axP.set_xscale("log")
+    axP.set_yscale("log")
+    axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
+    add_xmin(m, axP)
+    axP.legend(loc="lower right")
+    # plot rel. uncertainty
+    axU = axs[1]
+    axU.fill_between(
+        df["sqrt_s"], df["down"] / df["central"], df["up"] / df["central"], alpha=0.4
+    )
+    axU.plot(df["sqrt_s"], np.ones(len(df["central"])))
+    axU.set_xlabel(r"$\sqrt{s}$ [GeV]")
+    axU.set_ylabel(r"rel. Unc.")
+    axU.set_ylim(0.75, 1.25)
+    # axU.set_yscale("log")
+    # axU.set_yticks(np.geomspace(0.5, 2.0, 3), ["0.5", "1.0", "2.0"])
+    # axU.set_yticks(np.geomspace(0.5, 2.0, 5), [], minor=True)
+    axU.tick_params(
+        "both",
+        which="both",
+        direction="in",
+        bottom=True,
+        top=True,
+        left=True,
+        right=True,
+    )
+    fig.tight_layout()
+    sr_suffix = "-sr" if short_range else ""
+    fig.savefig(
+        f"plots/{LABELS[nl]}-{m_to_str(m)}-{pdf.replace('/','__')}-alphas{extra.suffix}{sr_suffix}.pdf"
+    )
 
 
 def main() -> None:
@@ -954,7 +1122,7 @@ def main() -> None:
         pto(m, nl_, pdf, extra_, args.short_range)
     if args.alphas or args.all:
         print(h_alpha_s)
-        alphas(m, nl_, pdf, extra_)
+        alphas(m, nl_, pdf, extra_, args.short_range)
     if args.xmean_pto or args.all:
         print(h_xmean_pto)
         xmean_pto(m, nl_, pdf, extra_)
