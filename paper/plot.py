@@ -52,9 +52,9 @@ mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
 )
 
 
-def m2str(m2: float) -> str:
+def m_to_str(m: float) -> str:
     """Sanitize `.` to `p` for overleaf."""
-    return f"{m2:.2f}".replace(".", "p")
+    return f"{m:.2f}".replace(".", "p")
 
 
 def extract_sv_by_order(
@@ -95,11 +95,11 @@ def extract_sv_by_order(
 
 
 def load_pto(
-    m2: float, nl: int, pdf: str, extra: Extrapolation
+    m: float, nl: int, pdf: str, extra: Extrapolation
 ) -> Mapping[int, pd.DataFrame]:
     """Load PTO data."""
     # prepare objects
-    grid_path_ = pathlib.Path(grid_path(m2, nl))
+    grid_path_ = pathlib.Path(grid_path(m, nl))
     lhapdf.setVerbosity(0)
     central_pdf = lhapdf.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
@@ -107,17 +107,17 @@ def load_pto(
     dfs = {}
     for k in range(2 + 1):
         df = extract_sv_by_order(grid, central_pdf, extra, k)
-        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-pto-{k}{extra.suffix}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf}-pto-{k}{extra.suffix}.csv")
         dfs[k] = df
     return dfs
 
 
 def load_xmean_pto(
-    m2: float, nl: int, pdf: str, extra: Extrapolation
+    m: float, nl: int, pdf: str, extra: Extrapolation
 ) -> Mapping[int, pd.DataFrame]:
     """Load PTO data."""
     # prepare objects
-    grid_path_ = pathlib.Path(grid_path(m2, nl))
+    grid_path_ = pathlib.Path(grid_path(m, nl))
     lhapdf.setVerbosity(0)
     pdf_ = lhapdf.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
@@ -174,13 +174,15 @@ def load_xmean_pto(
         df["sqrt_s"] = grid.bin_left(0)
         df["mean"] = mean
         df["unc"] = np.sqrt(unc2)
-        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf}-xmean-pto-{k}{extra.suffix}.csv")
+        df.to_csv(
+            f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf}-xmean-pto-{k}{extra.suffix}.csv"
+        )
         dfs[k] = df
     return dfs
 
 
 def load_extra(
-    m2: float, nl: int, pdf: str, extras: Collection[Extrapolation]
+    m: float, nl: int, pdf: str, extras: Collection[Extrapolation]
 ) -> Collection[pd.DataFrame]:
     """Load extrapolation data."""
     dfs = []
@@ -191,7 +193,7 @@ def load_extra(
                 2212, extra.masked_xfxQ2(pdf_), pdf_.alphasQ2
             )
 
-        pdfs = load_pdf(m2, nl, [pdf], f"extra{extra.suffix}", conv)
+        pdfs = load_pdf(m, nl, [pdf], f"extra{extra.suffix}", conv)
         dfs.append(pdfs[pdf])
     return dfs
 
@@ -224,11 +226,11 @@ def extract_lumis_by_order(
 
 
 def load_lumi(
-    m2: float, nl: int, pdf: str, extra: Extrapolation
+    m: float, nl: int, pdf: str, extra: Extrapolation
 ) -> Mapping[int, pd.DataFrame]:
     """Load lumi data."""
     # prepare objects
-    grid_path_ = pathlib.Path(grid_path(m2, nl))
+    grid_path_ = pathlib.Path(grid_path(m, nl))
     lhapdf.setVerbosity(0)
     central_pdf = lhapdf.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
@@ -237,18 +239,18 @@ def load_lumi(
     for k in range(2 + 1):
         df = extract_lumis_by_order(grid, central_pdf, extra, k)
         df.to_csv(
-            f"data/{LABELS[nl]}-{m2:.2f}-{pdf.replace('/','__')}-lumi-{k}{extra.suffix}.csv"
+            f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf.replace('/','__')}-lumi-{k}{extra.suffix}.csv"
         )
         dfs[k] = df
     return dfs
 
 
 def load_pdf(
-    m2: float, nl: int, pdf_sets: Collection[str], suffix: str, f: Callable
+    m: float, nl: int, pdf_sets: Collection[str], suffix: str, f: Callable
 ) -> Mapping[str, pd.DataFrame]:
     """Load PDF data from a grid."""
     # prepare objects
-    grid_path_ = pathlib.Path(grid_path(m2, nl))
+    grid_path_ = pathlib.Path(grid_path(m, nl))
     grid = pineappl.grid.Grid.read(grid_path_)
     lhapdf.setVerbosity(0)
     dfs = {}
@@ -281,7 +283,7 @@ def load_pdf(
                 df["central"] = list(map(lambda u: u.central, pdf_errs))
                 df["pdf_minus"] = list(map(lambda u: u.central - u.errminus, pdf_errs))
                 df["pdf_plus"] = list(map(lambda u: u.central + u.errplus, pdf_errs))
-        df.to_csv(f"data/{LABELS[nl]}-{m2:.2f}-{pdf_set_name}-{suffix}.csv")
+        df.to_csv(f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf_set_name}-{suffix}.csv")
         dfs[pdf_set_name] = df
 
     return dfs
@@ -316,7 +318,7 @@ def load_mass(
 
 
 def pdf_raw(
-    m2: float,
+    m: float,
     nl: int,
     suffix: str,
     f: Callable,
@@ -324,15 +326,15 @@ def pdf_raw(
 ) -> Tuple[mpl.figure.Figure, str]:
     """Plot PDF dependence."""
     # load data
-    elems = to_elems(m2, abs(nl))
-    mass_label = f"{m2:.2f}-" if m2 > 0.0 else ""
+    elems = to_elems(m, abs(nl))
+    mass_label = f"{m_to_str(m)}-" if m > 0.0 else ""
 
     # collect datapoints
     dfs = {}
-    for actual_m2_, pdfs in elems:
-        for pdf, df in load_pdf(actual_m2_, nl, pdfs, suffix, f).items():
+    for actual_m_, pdfs in elems:
+        for pdf, df in load_pdf(actual_m_, nl, pdfs, suffix, f).items():
             # relabel if necessary
-            new_label = pdf if m2 > 0.0 else f"{pdf} $m_h={actual_m2_:.2f}$ GeV"
+            new_label = pdf if m > 0.0 else f"{pdf} $m_h={actual_m_:.2f}$ GeV"
             dfs[new_label] = df
     output = f"{LABELS[nl]}-{mass_label}{suffix}.pdf"
 
@@ -356,8 +358,8 @@ def pdf_raw(
         right=True,
     )
     axs[0].legend()
-    if m2 != 0.0:
-        add_xmin(m2, axs[0])
+    if m != 0.0:
+        add_xmin(m, axs[0])
     # rel. size
     norm = list(dfs.values())[0]["central"]
     for _, df in dfs.items():
@@ -383,14 +385,14 @@ def pdf_raw(
     return fig, path
 
 
-def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
+def to_elems(m: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
     """Collect default settings."""
     elems = []
-    if m2 > 0.0:  # use a fixed mass
+    if m > 0.0:  # use a fixed mass
         if nl == 3:
             elems = [
                 (
-                    m2,
+                    m,
                     [
                         "NNPDF40_nnlo_pch_as_01180_nf_3",
                         # "NNPDF40_nnlo_as_01180",
@@ -406,7 +408,7 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
         elif nl == 4:
             elems = [
                 (
-                    m2,
+                    m,
                     [
                         "NNPDF40_nnlo_as_01180_nf_4",
                         # "NNPDF31_nnlo_as_0118_nf_4"
@@ -431,7 +433,7 @@ def to_elems(m2: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
     return elems
 
 
-def pdf_obs(m2: float, nl: int, extra: Extrapolation) -> None:
+def pdf_obs(m: float, nl: int, extra: Extrapolation) -> None:
     """Plot PDF dependence."""
 
     # plot the actual predictions
@@ -439,7 +441,7 @@ def pdf_obs(m2: float, nl: int, extra: Extrapolation) -> None:
         return grid.convolute_with_one(2212, extra.masked_xfxQ2(pdf_), pdf_.alphasQ2)
 
     fig, path = pdf_raw(
-        m2,
+        m,
         nl,
         "pdf" + extra.suffix,
         conv,
@@ -450,17 +452,17 @@ def pdf_obs(m2: float, nl: int, extra: Extrapolation) -> None:
     fig.savefig(path)
 
 
-def _sqrts2xmin(m2: float, sqrt_s: float) -> float:
+def _sqrts2xmin(m: float, sqrt_s: float) -> float:
     r"""Convert :math:`\sqrt s` to :math:`x_{min}`."""
-    return 4.0 * m2 / np.power(sqrt_s, 2)
+    return 4.0 * m * m / np.power(sqrt_s, 2)
 
 
-def _xmin2sqrts(m2: float, xmin: float) -> float:
+def _xmin2sqrts(m: float, xmin: float) -> float:
     r"""Convert :math:`x_{min}` to :math:`\sqrt s`."""
-    return np.sqrt(4.0 * m2 / xmin)
+    return np.sqrt(4.0 * m * m / xmin)
 
 
-def add_xmin(m2: float, ax0) -> None:
+def add_xmin(m: float, ax0) -> None:
     """Add x_min as second x-axis on top."""
     ax0.tick_params(
         "both",
@@ -474,15 +476,15 @@ def add_xmin(m2: float, ax0) -> None:
     secax = ax0.secondary_xaxis(
         "top",
         functions=(
-            lambda sqrt_s: _sqrts2xmin(m2, sqrt_s),
-            lambda xmin: _xmin2sqrts(m2, xmin),
+            lambda sqrt_s: _sqrts2xmin(m, sqrt_s),
+            lambda xmin: _xmin2sqrts(m, xmin),
         ),
     )
     secax.set_xlabel(r"$x_{min}$")
     secax.tick_params("x", which="both", direction="in")
 
 
-def pdf_gluon(m2: float, nl: int, extra: Extrapolation) -> None:
+def pdf_gluon(m: float, nl: int, extra: Extrapolation) -> None:
     """Plot gluon(x_min) dependence."""
 
     def extract(grid, pdf_):
@@ -495,7 +497,7 @@ def pdf_gluon(m2: float, nl: int, extra: Extrapolation) -> None:
         return res
 
     pdf_raw(
-        m2,
+        m,
         nl,
         "gluon" + extra.suffix,
         extract,
@@ -503,7 +505,7 @@ def pdf_gluon(m2: float, nl: int, extra: Extrapolation) -> None:
     )
 
 
-def pdf_xmean(m2: float, nl: int, extra: Extrapolation) -> None:
+def pdf_xmean(m: float, nl: int, extra: Extrapolation) -> None:
     """Plot x_mean PDF dependence."""
 
     def conv(grid, pdf_):
@@ -525,7 +527,7 @@ def pdf_xmean(m2: float, nl: int, extra: Extrapolation) -> None:
         return (x1 + x2) / (2.0 * sig)
 
     pdf_raw(
-        m2,
+        m,
         nl,
         "xmean" + extra.suffix,
         conv,
@@ -533,7 +535,7 @@ def pdf_xmean(m2: float, nl: int, extra: Extrapolation) -> None:
     )
 
 
-def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
+def pdf_gg(m: float, nl: int, extra: Extrapolation) -> None:
     """Plot gg(x_min) dependence."""
 
     def lumi_ker(z: float, pdf_, x, mu2):
@@ -556,7 +558,7 @@ def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
         return res
 
     pdf_raw(
-        m2,
+        m,
         nl,
         "gg" + extra.suffix,
         extract,
@@ -568,10 +570,10 @@ def pdf_gg(m2: float, nl: int, extra: Extrapolation) -> None:
 SHORT_RANGE_MAX: float = 20e3
 
 
-def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
+def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
     """Plot convergence of PTO."""
     # prepare data
-    dfs = load_pto(m2, nl, pdf, extra)
+    dfs = load_pto(m, nl, pdf, extra)
 
     # plot bare
     fig, axs = plt.subplots(3, 1, height_ratios=[1, 0.35, 0.35], sharex=True)
@@ -586,7 +588,7 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     axP.set_xscale("log")
     axP.set_yscale("log")
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
-    add_xmin(m2, axP)
+    add_xmin(m, axP)
     axP.legend()
     # plot uncertainty
     axU = axs[1]
@@ -633,14 +635,14 @@ def pto(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     fig.tight_layout()
     sr_suffix = "-sr" if short_range else ""
     fig.savefig(
-        f"plots/{LABELS[nl]}-{m2str(m2)}-{pdf}-pto{extra.suffix}{sr_suffix}.pdf"
+        f"plots/{LABELS[nl]}-{m_to_str(m)}-{pdf}-pto{extra.suffix}{sr_suffix}.pdf"
     )
 
 
-def xmean_pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
+def xmean_pto(m: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     """Plot x_mean PTO dependence."""
     # prepare data
-    dfs = load_xmean_pto(m2, nl, pdf, extra)
+    dfs = load_xmean_pto(m, nl, pdf, extra)
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
@@ -663,7 +665,7 @@ def xmean_pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
         left=True,
         right=True,
     )
-    add_xmin(m2, axs[0])
+    add_xmin(m, axs[0])
     axs[0].legend()
     # plot K-factor
     axs[1].fill_between([], [])  # add empty plot to align colors
@@ -692,10 +694,10 @@ def xmean_pto(m2: float, nl: int, pdf: str, extra: Extrapolation) -> None:
     )
     axs[1].legend()
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-xmean-pto{extra.suffix}.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-{m_to_str(m)}-{pdf}-xmean-pto{extra.suffix}.pdf")
 
 
-def extra_dep(m2: float, nl: int, pdf: str) -> None:
+def extra_dep(m: float, nl: int, pdf: str) -> None:
     """Plot extrapolation dependency."""
     # prepare data
     extras = [
@@ -703,7 +705,7 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
         Extrapolation(-1, False),
         Extrapolation(1e-5, False),
     ]
-    dfs = load_extra(m2, nl, pdf, extras)
+    dfs = load_extra(m, nl, pdf, extras)
 
     # plot xs
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
@@ -731,7 +733,7 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
         left=True,
         right=True,
     )
-    add_xmin(m2, axs[0])
+    add_xmin(m, axs[0])
     axs[0].legend()
     # plot rel. PDF uncertainty
     norm = dfs[0]["central"]
@@ -753,13 +755,13 @@ def extra_dep(m2: float, nl: int, pdf: str) -> None:
         right=True,
     )
     fig.tight_layout()
-    fig.savefig(f"plots/{LABELS[nl]}-{m2:.2f}-{pdf}-extra.pdf")
+    fig.savefig(f"plots/{LABELS[nl]}-{m_to_str(m)}-{pdf}-extra.pdf")
 
 
-def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
+def lumi(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
     """Plot lumi separation."""
     # prepare data
-    dfs = load_lumi(m2, nl, pdf, extra)
+    dfs = load_lumi(m, nl, pdf, extra)
 
     # plot
     fig, ax = plt.subplots(1, 1)
@@ -789,7 +791,7 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
         left=True,
         right=True,
     )
-    add_xmin(m2, ax)
+    add_xmin(m, ax)
     # Fiddle with legend! Thanks https://stackoverflow.com/a/44072076
     h, l = ax.get_legend_handles_labels()
     empty = [plt.plot([], marker="", ls="")[0]]
@@ -809,7 +811,7 @@ def lumi(m2: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) 
     fig.tight_layout()
     sr_suffix = "-sr" if short_range else ""
     fig.savefig(
-        f"plots/{LABELS[nl]}-{m2str(m2)}-{pdf.replace('/','__')}-lumi{extra.suffix}{sr_suffix}.pdf"
+        f"plots/{LABELS[nl]}-{m_to_str(m)}-{pdf.replace('/','__')}-lumi{extra.suffix}{sr_suffix}.pdf"
     )
 
 
@@ -878,10 +880,14 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     fig.savefig(f"plots/{LABELS[nl]}-mass{extra.suffix}{sr_suffix}.pdf")
 
 
+def alphas(m: float, nl: int, pdf: str, extra: Extrapolation) -> None:
+    """Plot alpha_s dependency"""
+
+
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("m2", type=float, help="Mass of heavy quark")
+    parser.add_argument("m", type=float, help="(Linear) mass of heavy quark [GeV]")
     parser.add_argument("nl", type=int, help="Number of light flavors")
     h_pto = "Plot convergence with PTO"
     parser.add_argument("--pto", help=h_pto, action="store_true")
@@ -899,6 +905,8 @@ def main() -> None:
     parser.add_argument("--gg", help=h_gg, action="store_true")
     h_mass = "Plot mass dependency"
     parser.add_argument("--mass", help=h_mass, action="store_true")
+    h_alpha_s = "Plot alpha_s dependency"
+    parser.add_argument("--alphas", help=h_alpha_s, action="store_true")
     h_extra = "Plot extrapolation dependency"
     parser.add_argument("--extra", help=h_extra, action="store_true")
     parser.add_argument("--all", help="Plot everything", action="store_true")
@@ -914,45 +922,48 @@ def main() -> None:
     )
     parser.add_argument("--short-range", help="Restrict abscissa", action="store_true")
     args = parser.parse_args()
-    m2_: float = float(args.m2)
+    m: float = float(args.m)
     nl_: int = int(args.nl)
     extra_ = Extrapolation(float(args.extrapolate_xmin), bool(args.extrapolate_const))
     # multi PDF plots
     if args.pdf or args.all:
         print(h_pdf)
-        pdf_obs(m2_, nl_, extra_)
+        pdf_obs(m, nl_, extra_)
     if args.gluon or args.all:
         print(h_gluon)
-        pdf_gluon(m2_, nl_, extra_)
+        pdf_gluon(m, nl_, extra_)
     if args.xmean or args.all:
         print(h_xmean)
-        pdf_xmean(m2_, nl_, extra_)
+        pdf_xmean(m, nl_, extra_)
     if args.gg or args.all:
         print(h_gg)
-        pdf_gg(m2_, nl_, extra_)
+        pdf_gg(m, nl_, extra_)
     if args.mass or args.all:
         print(h_mass)
         mass(nl_, extra_, args.short_range)
     # single PDF plots
-    if m2_ > 0:
-        pdf = PDFS[abs(nl_)][f"{m2_:.2f}"]
+    if m > 0:
+        pdf = PDFS[abs(nl_)][f"{m:.2f}"]
     else:
-        m2_, pdf = to_elems(m2_, abs(nl_))[0]
+        m, pdf = to_elems(m, abs(nl_))[0]
         pdf = pdf[0]
     if args.pdf_set:
         pdf = args.pdf_set
     if args.pto or args.all:
         print(h_pto)
-        pto(m2_, nl_, pdf, extra_, args.short_range)
+        pto(m, nl_, pdf, extra_, args.short_range)
+    if args.alphas or args.all:
+        print(h_alpha_s)
+        alphas(m, nl_, pdf, extra_)
     if args.xmean_pto or args.all:
         print(h_xmean_pto)
-        xmean_pto(m2_, nl_, pdf, extra_)
+        xmean_pto(m, nl_, pdf, extra_)
     if args.lumi or args.all:
         print(h_lumi)
-        lumi(m2_, nl_, pdf, extra_, args.short_range)
+        lumi(m, nl_, pdf, extra_, args.short_range)
     if args.extra or args.all:
         print(h_extra)
-        extra_dep(m2_, nl_, pdf)
+        extra_dep(m, nl_, pdf)
 
 
 if __name__ == "__main__":
