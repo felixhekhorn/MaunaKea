@@ -769,7 +769,7 @@ def lumi(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     dfs = load_lumi(m, nl, pdf, extra)
 
     # plot
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
     for pto_, ls in [(0, "dotted"), (1, "dashed"), (2, "solid")]:
         df = dfs[pto_]
         for lu, raw_lab in enumerate(["gg", "qqbar", "gq"]):
@@ -797,6 +797,14 @@ def lumi(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
         right=True,
     )
     add_xmin(m, ax)
+    ax.text(
+        0.5,
+        0.7,
+        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$",
+        horizontalalignment="left",
+        verticalalignment="bottom",
+        transform=ax.transAxes,
+    )
     # Fiddle with legend! Thanks https://stackoverflow.com/a/44072076
     h, l = ax.get_legend_handles_labels()
     empty = [plt.plot([], marker="", ls="")[0]]
@@ -806,7 +814,13 @@ def lumi(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     labels = np.insert(labels, 0, ["$gg$", r"$q\bar{q}$", "$gq$"], 0)
     handles = np.insert(handles, 0, empty * 4, 1)
     labels = np.insert(labels, 0, [" ", "LO", "NLO", "NNLO"], 1)
-    leg = ax.legend(handles.flatten(), labels.flatten(), ncol=4)
+    leg = ax.legend(
+        handles.flatten(),
+        labels.flatten(),
+        ncol=4,
+        frameon=False,
+        loc="center right",
+    )
     for vpack in leg._legend_handle_box.get_children():
         for hpack in vpack.get_children():
             hpack.get_children()[0].set_width(0)
