@@ -579,7 +579,9 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
     dfs = load_pto(m, nl, pdf, extra)
 
     # plot bare
-    fig, axs = plt.subplots(3, 1, height_ratios=[1, 0.35, 0.35], sharex=True)
+    fig, axs = plt.subplots(
+        3, 1, height_ratios=[1, 0.35, 0.35], sharex=True, figsize=(5, 5)
+    )
     axP = axs[0]
     for k, lab in [(0, "LO"), (1, "NLO"), (2, "NNLO")]:
         df = dfs[k]
@@ -592,25 +594,25 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
     axP.set_yscale("log")
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
     add_xmin(m, axP)
-    axP.legend()
+    axP.text(
+        0.05,
+        0.95,
+        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$",
+        horizontalalignment="left",
+        verticalalignment="top",
+        transform=axP.transAxes,
+    )
+    axP.legend(loc="lower right", frameon=False)
     # plot uncertainty
     axU = axs[1]
     for k, lab in [(0, "LO"), (1, "NLO"), (2, "NNLO")]:
         df = dfs[k]
         axU.plot(
             df["sqrt_s"],
-            np.max(
-                [
-                    (df["central"] / df["sv_min"]).abs(),
-                    (df["sv_max"] / df["central"]).abs(),
-                ],
-                axis=0,
-            ),
+            (df["sv_max"] - df["sv_min"]) / df["central"].abs(),
             label=lab,
         )
     if nl == 3:  # There seems to be a spike somewhere
-        axU.set_ylim(1.5, 3.5)
-    else:
         axU.set_ylim(0.9, 2.9)
     axU.set_ylabel("rel. Unc.")
     # plot K-factor
@@ -618,7 +620,7 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
     axK.plot([])  # add empty plot to align colors
     for k1, k2, lab in [(1, 0, "NLO/LO"), (2, 1, "NNLO/NLO")]:
         axK.plot(dfs[k1]["sqrt_s"], dfs[k1]["central"] / dfs[k2]["central"], label=lab)
-    axK.set_ylim(1.0, 3.1)
+    axK.set_ylim(0.9, 3.1)
     axK.set_xlabel(r"$\sqrt{s}$ [GeV]")
     axK.set_ylabel(r"K factor")
     axK.legend()
