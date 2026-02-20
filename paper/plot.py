@@ -292,31 +292,29 @@ def load_pdf(
     return dfs
 
 
-def load_mass(
-    ms: Collection[float], nl: int, pdf_set: str, extra: Extrapolation
-) -> pd.DataFrame:
+def load_mass(ms: list[float], nl: int, pdf: str, extra: Extrapolation) -> pd.DataFrame:
     """Load PDF data from a grid."""
     # prepare objects
     lhapdf.setVerbosity(0)
     df = pd.DataFrame()
     pdf_vals = []
-    m_central = (MSHT20_MCRANGE if abs(nl) == 3 else MSHT20_MBRANGE)[0]
+    m_central = ms[0]
     for j, m in enumerate(ms):
         grid_path_ = pathlib.Path(grid_path(m, nl))
         grid = pineappl.grid.Grid.read(grid_path_)
-        pdf = lhapdf.mkPDF(pdf_set, 0)  # j)
+        central_pdf = lhapdf.mkPDF(pdf, 0)
         df["sqrt_s"] = grid.bin_left(0)
         # Fix µ to the central choice
         xi = m_central / m
         vals = grid.convolute_with_one(
-            2212, extra.masked_xfxQ2(pdf), pdf.alphasQ2, xi=[(xi, xi)]
+            2212, extra.masked_xfxQ2(central_pdf), central_pdf.alphasQ2, xi=[(xi, xi)]
         )
         df[f"{j}"] = vals
         pdf_vals.append(vals)
     pdf_vals = np.array(pdf_vals)
     df["min"] = pdf_vals.min(0)
     df["max"] = pdf_vals.max(0)
-    df.to_csv(f"data/{LABELS[nl]}-{pdf_set}{extra.suffix}.csv")
+    df.to_csv(f"data/{LABELS[nl]}-{pdf.replace('/','__')}-mass{extra.suffix}.csv")
     return df
 
 
@@ -595,9 +593,9 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
     add_xmin(m, axP)
     axP.text(
-        0.05,
+        0.03,
         0.95,
-        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$",
+        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$" + f"\n{pdf}",
         horizontalalignment="left",
         verticalalignment="top",
         transform=axP.transAxes,
@@ -798,9 +796,9 @@ def lumi(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     )
     add_xmin(m, ax)
     ax.text(
-        0.5,
-        0.7,
-        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$",
+        0.35,
+        0.65,
+        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$" + f"\n{pdf}",
         horizontalalignment="left",
         verticalalignment="bottom",
         transform=ax.transAxes,
@@ -834,28 +832,31 @@ def lumi(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     )
 
 
-def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
+def mass(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -> None:
     """Plot mass dependency."""
     # prepare data
-    if abs(nl) == 3:
-        # ms = [1.3, 1.15, 1.45]
-        # pdf = "CT18NNLO_rescaled_NF3"
-        # ms = [1.51, 1.65, 1.35]
-        # pdf = "NNPDF40_nnlo_pch_as_01180_nf_3"
-        ms = MSHT20_MCRANGE
-        pdf = "MSHT20nnlo_mcrange_nf3"
+    if "NNPDF" in pdf:
+        if abs(nl) == 3:
+            ms = [1.51, 1.65, 1.35]
+        else:
+            ms = [4.92, 5.5, 4.5]
+    elif "CT" in pdf:
+        if abs(nl) == 3:
+            ms = [1.3, 1.15, 1.45]
+        else:
+            ms = [4.75, 5.25, 4.25]
+    elif "MSHT" in pdf:
+        if abs(nl) == 3:
+            ms = MSHT20_MCRANGE
+        else:
+            ms = MSHT20_MBRANGE
     else:
-        # ms = [4.75, 5.25, 4.25]
-        # pdf = "CT18NNLO_rescaled_NF4"
-        # ms = [4.92, 5.5, 4.5]
-        # pdf = "NNPDF40_nnlo_as_01180_nf_4"
-        ms = MSHT20_MBRANGE
-        pdf = "MSHT20nnlo_mbrange_nf4"
+        raise ValueError("Could not determine mass range")
     df = load_mass(ms, nl, pdf, extra)
-    label = f"{pdf}\n$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}$ GeV"
+    label = f"$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}$ GeV"
 
     # plot bare
-    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
+    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True, figsize=(5, 5))
     axP = axs[0]
     axP.fill_between(df["sqrt_s"], df["min"], df["max"], alpha=0.4)
     axP.plot(df["sqrt_s"], df["0"], label=label)
@@ -874,7 +875,15 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
         left=True,
         right=True,
     )
-    axP.legend(loc="lower right")
+    axP.text(
+        0.03,
+        0.95,
+        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$" + f"\n{pdf}",
+        horizontalalignment="left",
+        verticalalignment="top",
+        transform=axP.transAxes,
+    )
+    axP.legend(loc="lower right", frameon=False)
     # plot rel. uncertainty
     axU = axs[1]
     axU.fill_between(df["sqrt_s"], df["min"] / df["0"], df["max"] / df["0"], alpha=0.4)
@@ -896,7 +905,9 @@ def mass(nl: int, extra: Extrapolation, short_range: bool) -> None:
     )
     fig.tight_layout()
     sr_suffix = "-sr" if short_range else ""
-    fig.savefig(f"plots/{LABELS[nl]}-mass{extra.suffix}{sr_suffix}.pdf")
+    fig.savefig(
+        f"plots/{LABELS[nl]}-{m_to_str(m)}-{pdf.replace('/','__')}-mass{extra.suffix}{sr_suffix}.pdf"
+    )
 
 
 def _alphas_nnpdf(
@@ -1122,9 +1133,6 @@ def main() -> None:
     if args.gg or args.all:
         print(h_gg)
         pdf_gg(m, nl_, extra_)
-    if args.mass or args.all:
-        print(h_mass)
-        mass(nl_, extra_, args.short_range)
     # single PDF plots
     if m > 0:
         pdf = PDFS[abs(nl_)][f"{m:.2f}"]
@@ -1139,6 +1147,9 @@ def main() -> None:
     if args.alphas or args.all:
         print(h_alpha_s)
         alphas(m, nl_, pdf, extra_, args.short_range)
+    if args.mass or args.all:
+        print(h_mass)
+        mass(m, nl_, pdf, extra_, args.short_range)
     if args.xmean_pto or args.all:
         print(h_xmean_pto)
         xmean_pto(m, nl_, pdf, extra_)
