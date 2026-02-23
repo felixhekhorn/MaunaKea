@@ -335,11 +335,15 @@ def pdf_raw(
     for actual_m_, pdfs in elems:
         for pdf, df in load_pdf(actual_m_, nl, pdfs, suffix, f).items():
             # relabel if necessary
-            new_label = pdf if m > 0.0 else f"{pdf} $m_h={actual_m_:.2f}$ GeV"
+            new_label = (
+                pdf
+                if m > 0.0
+                else f"{pdf}, $m_{TEX_LABELS[abs(nl)][0]}={actual_m_:.2f}$ GeV"
+            )
             dfs[new_label] = df
     output = f"{LABELS[nl]}-{mass_label}{suffix}.pdf"
 
-    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True)
+    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True, figsize=(5, 5))
     # plot nominal x_min
     # plot data
     for pdf_set, df in dfs.items():
@@ -358,7 +362,15 @@ def pdf_raw(
         left=True,
         right=True,
     )
-    axs[0].legend()
+    axs[0].text(
+        0.03,
+        0.95,
+        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$",
+        horizontalalignment="left",
+        verticalalignment="top",
+        transform=axs[0].transAxes,
+    )
+    axs[0].legend(loc="upper left", bbox_to_anchor=(-0.03, 0.0), frameon=False)
     if m != 0.0:
         add_xmin(m, axs[0])
     # rel. size
@@ -368,7 +380,7 @@ def pdf_raw(
             df["sqrt_s"], df["pdf_plus"] / norm, df["pdf_minus"] / norm, alpha=0.4
         )
         axs[1].plot(df["sqrt_s"], df["central"] / norm)
-    axs[1].set_ylim(-0.5, 2)
+    axs[1].set_ylim(-0.1, 2.1)
     axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
     axs[1].set_ylabel(r"rel. PDF unc.")
     axs[1].tick_params(
@@ -381,6 +393,7 @@ def pdf_raw(
         right=True,
     )
     fig.tight_layout()
+    fig.subplots_adjust(hspace=0.45)
     path = f"plots/{output}"
     fig.savefig(path)
     return fig, path
