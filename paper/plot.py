@@ -319,11 +319,7 @@ def load_mass(ms: list[float], nl: int, pdf: str, extra: Extrapolation) -> pd.Da
 
 
 def pdf_raw(
-    m: float,
-    nl: int,
-    suffix: str,
-    f: Callable,
-    ylabel: str,
+    m: float, nl: int, suffix: str, f: Callable, ylabel: str
 ) -> Tuple[mpl.figure.Figure, str]:
     """Plot PDF dependence."""
     # load data
@@ -332,6 +328,7 @@ def pdf_raw(
 
     # collect datapoints
     dfs = {}
+    sqrts_maxs = []
     for actual_m_, pdfs in elems:
         for pdf, df in load_pdf(actual_m_, nl, pdfs, suffix, f).items():
             # relabel if necessary
@@ -341,10 +338,17 @@ def pdf_raw(
                 else f"{pdf}, $m_{TEX_LABELS[abs(nl)][0]}={actual_m_:.2f}$ GeV"
             )
             dfs[new_label] = df
+            # Log xmin ~ sqrts_max
+            pdf_set = lhapdf.getPDFSet(pdf)
+            if not pdf_set.has_key("XMin"):
+                sqrts_maxs.append(None)
+            else:
+                xmin = float(pdf_set.get_entry("XMin"))
+                sqrts_maxs.append(np.sqrt(4.0 * actual_m_**2 / xmin))
+
     output = f"{LABELS[nl]}-{mass_label}{suffix}.pdf"
 
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True, figsize=(5, 5))
-    # plot nominal x_min
     # plot data
     for pdf_set, df in dfs.items():
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
@@ -371,15 +375,36 @@ def pdf_raw(
         transform=axs[0].transAxes,
     )
     axs[0].legend(loc="upper left", bbox_to_anchor=(-0.03, 0.0), frameon=False)
+    # plot nominal x_min
     if m != 0.0:
         add_xmin(m, axs[0])
+    for j, sqrt_max in enumerate(sqrts_maxs):
+        axs[0].vlines(
+            [sqrt_max],
+            0.5,
+            1,
+            transform=axs[0].get_xaxis_transform(),
+            colors=f"C{j}",
+            linestyles="dashed",
+            linewidths=0.7,
+        )
     # rel. size
     norm = list(dfs.values())[0]["central"]
-    for _, df in dfs.items():
+    for _pdf_set, df in dfs.items():
         axs[1].fill_between(
             df["sqrt_s"], df["pdf_plus"] / norm, df["pdf_minus"] / norm, alpha=0.4
         )
         axs[1].plot(df["sqrt_s"], df["central"] / norm)
+    for j, sqrt_max in enumerate(sqrts_maxs):
+        axs[1].vlines(
+            [sqrt_max],
+            0,
+            1,
+            transform=axs[1].get_xaxis_transform(),
+            colors=f"C{j}",
+            linestyles="dashed",
+            linewidths=0.7,
+        )
     axs[1].set_ylim(-0.1, 2.1)
     axs[1].set_xlabel(r"$\sqrt{s}$ [GeV]")
     axs[1].set_ylabel(r"rel. PDF unc.")
@@ -571,13 +596,7 @@ def pdf_gg(m: float, nl: int, extra: Extrapolation) -> None:
             res.append(pdf_lumi(pdf_, np.min(sg.x1_grid()), sg.mu2_grid()[0].fac))
         return res
 
-    pdf_raw(
-        m,
-        nl,
-        "gg" + extra.suffix,
-        extract,
-        r"$x L_{gg}(x_{min})$",
-    )
+    pdf_raw(m, nl, "gg" + extra.suffix, extract, r"$\mathcal{L}_{gg}(x_{min})$")
 
 
 # restrict sqrt(s) if requested
