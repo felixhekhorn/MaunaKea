@@ -642,8 +642,7 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
             (df["sv_max"] - df["sv_min"]) / df["central"].abs(),
             label=lab,
         )
-    if nl == 3:  # There seems to be a spike somewhere
-        axU.set_ylim(0.9, 2.9)
+    axU.set_ylim(0.4, 3.1)
     axU.set_ylabel("rel. Unc.")
     # plot K-factor
     axK = axs[2]
