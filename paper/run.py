@@ -79,7 +79,7 @@ DATA: dict[int, list[ExpConfig]] = {
 LABELS = {3: "ccbar", 4: "bbbar", -3: "data-ccbar", -4: "data-bbbar"}
 """File prefixes."""
 
-SH_MIN: dict[int, float] = {3: 10.0**2, 4: 20.0**2}
+SH_MIN: dict[int, float] = {3: 10.0**2, 4: 12.0**2}
 """Minimum energy for plotting."""
 
 SH_MAX: float = 400e3**2
