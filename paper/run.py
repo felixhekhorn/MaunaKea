@@ -60,6 +60,14 @@ DATA: dict[int, list[ExpConfig]] = {
         ExpConfig("94,97,98", 5.02e3 * _PINEAPPL_BIN_HACK),  # OK
         ExpConfig("15,17,21,23", 7e3),  # OK
         ExpConfig("11", 13e3),  # OK
+        # DdE 2026-03-19 15:23 EET
+        # we would need indeed the predictions from you at sqrt(s)=13.6 and 14 TeV because all LHC collaborations will ask for those, and I we have the values tabulated it is much more likely that the paper is cited.
+        # we would need also the values for sqrt(s) = 84, 100 TeV (FCC-hh) and 400 TeV (UHECRs) even if we know that those are "crazy" extrapolations for now.
+        ExpConfig("", 13.6e3),  # LHC Run 3
+        ExpConfig("", 14e3),  # HL-LHC
+        ExpConfig("", 84e3),  # FCC-hh
+        ExpConfig("", 100e3),  # FCC-hh
+        ExpConfig("", 400e3),  # UHECRs
     ],
     4: [
         ExpConfig("89", 0.0387e3, A["S"]),
@@ -72,6 +80,12 @@ DATA: dict[int, list[ExpConfig]] = {
         ExpConfig("76", 2.76e3),
         ExpConfig("15,16,56", 7e3),
         ExpConfig("56", 13e3),
+        # see above
+        ExpConfig("", 13.6e3),  # LHC Run 3
+        ExpConfig("", 14e3),  # HL-LHC
+        ExpConfig("", 84e3),  # FCC-hh
+        ExpConfig("", 100e3),  # FCC-hh
+        ExpConfig("", 400e3),  # UHECRs
     ],
 }
 """Experiment configurations for c and b."""
