@@ -353,7 +353,7 @@ def pdf_raw(
     for pdf_set, df in dfs.items():
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
         axs[0].plot(df["sqrt_s"], df["central"], label=pdf_set)
-        axs[0].set_xlim(df["sqrt_s"].min(), df["sqrt_s"].max())
+        axs[0].set_xlim(10.0, df["sqrt_s"].max())
     axs[0].set_xscale("log")
     axs[0].set_yscale("log")
     axs[0].set_ylabel(ylabel)
@@ -617,9 +617,7 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
         df = dfs[k]
         axP.fill_between(df["sqrt_s"], df["sv_min"], df["sv_max"], alpha=0.4)
         axP.plot(df["sqrt_s"], df["central"], label=lab)
-        axP.set_xlim(
-            df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
-        )
+        axP.set_xlim(10.0, SHORT_RANGE_MAX if short_range else df["sqrt_s"].max())
     axP.set_xscale("log")
     axP.set_yscale("log")
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
@@ -810,9 +808,7 @@ def lumi(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
                 color=f"C{lu}",
                 linestyle=ls,
             )
-        ax.set_xlim(
-            df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
-        )
+        ax.set_xlim(10.0, SHORT_RANGE_MAX if short_range else df["sqrt_s"].max())
     ax.set_ylim(-25, 107)
     ax.set_xscale("log")
     ax.set_ylabel(rf"$\sigma^{{ij}}/\sigma^{{tot}}_{{{TEX_LABELS[abs(nl)]}}}$ [%]")
@@ -892,9 +888,7 @@ def mass(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     axP = axs[0]
     axP.fill_between(df["sqrt_s"], df["min"], df["max"], alpha=0.4)
     axP.plot(df["sqrt_s"], df["0"], label=label)
-    axP.set_xlim(
-        df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
-    )
+    axP.set_xlim(10.0, SHORT_RANGE_MAX if short_range else df["sqrt_s"].max())
     axP.set_xscale("log")
     axP.set_yscale("log")
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
@@ -1075,9 +1069,7 @@ def alphas(
     axP = axs[0]
     axP.fill_between(df["sqrt_s"], df["down"], df["up"], alpha=0.4)
     axP.plot(df["sqrt_s"], df["central"], label=r"$\alpha_s = 0.118 \pm 0.001$")
-    axP.set_xlim(
-        df["sqrt_s"].min(), SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
-    )
+    axP.set_xlim(10.0, SHORT_RANGE_MAX if short_range else df["sqrt_s"].max())
     axP.set_xscale("log")
     axP.set_yscale("log")
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
