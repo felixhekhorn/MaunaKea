@@ -1030,18 +1030,18 @@ def _alphas_msht(
         central_pdf.alphasQ2,
     )
     sc_down = mk_sc(0.117)
-    down_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{nl}", 1)
+    down_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 1)
     down = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(down_pdf),
-        lambda q2: 4.0 * np.pi * sc_down.a_s(q2, nf_to=nl),
+        lambda q2: 4.0 * np.pi * sc_down.a_s(q2, nf_to=abs(nl)),
     )
     sc_up = mk_sc(0.119)
-    up_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{nl}", 2)
+    up_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 2)
     up = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(up_pdf),
-        lambda q2: 4.0 * np.pi * sc_up.a_s(q2, nf_to=nl),
+        lambda q2: 4.0 * np.pi * sc_up.a_s(q2, nf_to=abs(nl)),
     )
     df = pd.DataFrame()
     df["sqrt_s"] = grid.bin_left(0)
