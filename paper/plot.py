@@ -642,7 +642,8 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
             (df["sv_max"] - df["sv_min"]) / df["central"].abs(),
             label=lab,
         )
-    axU.set_ylim(0.4, 3.1)
+    axU.set_ylim(0.0, 3.1)
+    axU.set_yticks([0.0, 1.0, 2.0, 3.0])
     axU.set_ylabel("rel. Unc.")
     # plot K-factor
     axK = axs[2]
