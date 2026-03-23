@@ -6,7 +6,6 @@ from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from typing import Tuple
 
-import lhapdf
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,6 +14,9 @@ import pineappl
 from eko.couplings import Couplings
 from eko.quantities.couplings import CouplingEvolutionMethod, CouplingsInfo
 from eko.quantities.heavy_quarks import QuarkMassScheme
+
+# import lhapdf
+from neopdf.pdf import PDF as NEOPDF
 from scipy.integrate import quad
 
 from run import LABELS, MSHT20_MBRANGE, MSHT20_MCRANGE, PDFS, grid_path
@@ -61,7 +63,7 @@ def m_to_str(m: float) -> str:
 
 
 def extract_sv_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
+    grid: pineappl.grid.Grid, central_pdf: NEOPDF, extra: Extrapolation, pto_: int
 ) -> pd.DataFrame:
     """Extract a given PTO together with its SV."""
     # compute central value
@@ -103,8 +105,8 @@ def load_pto(
     """Load PTO data."""
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(m, nl))
-    lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF(pdf)
+    # lhapdf_setVerbosity(0)
+    central_pdf = NEOPDF.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
@@ -121,8 +123,8 @@ def load_xmean_pto(
     """Load PTO data."""
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(m, nl))
-    lhapdf.setVerbosity(0)
-    pdf_ = lhapdf.mkPDF(pdf)
+    # lhapdf_setVerbosity(0)
+    pdf_ = NEOPDF.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
@@ -202,7 +204,7 @@ def load_extra(
 
 
 def extract_lumis_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
+    grid: pineappl.grid.Grid, central_pdf: NEOPDF, extra: Extrapolation, pto_: int
 ) -> pd.DataFrame:
     """Extract lumi fraction for a given PTO."""
     order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
@@ -234,8 +236,8 @@ def load_lumi(
     """Load lumi data."""
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(m, nl))
-    lhapdf.setVerbosity(0)
-    central_pdf = lhapdf.mkPDF(pdf)
+    # lhapdf_setVerbosity(0)
+    central_pdf = NEOPDF.mkPDF(pdf)
     grid = pineappl.grid.Grid.read(grid_path_)
     # prepare data
     dfs = {}
@@ -255,10 +257,10 @@ def load_pdf(
     # prepare objects
     grid_path_ = pathlib.Path(grid_path(m, nl))
     grid = pineappl.grid.Grid.read(grid_path_)
-    lhapdf.setVerbosity(0)
+    # lhapdf_setVerbosity(0)
     dfs = {}
     for pdf_set_name in pdf_sets:
-        pdf_set = lhapdf.getPDFSet(pdf_set_name)
+        pdf_set = NEOPDF.getPDFSet(pdf_set_name)
         pdfs = pdf_set.mkPDFs()
         # compute PDF uncert
         pdf_vals = []
@@ -295,14 +297,14 @@ def load_pdf(
 def load_mass(ms: list[float], nl: int, pdf: str, extra: Extrapolation) -> pd.DataFrame:
     """Load PDF data from a grid."""
     # prepare objects
-    lhapdf.setVerbosity(0)
+    # lhapdf_setVerbosity(0)
     df = pd.DataFrame()
     pdf_vals = []
     m_central = ms[0]
     for j, m in enumerate(ms):
         grid_path_ = pathlib.Path(grid_path(m, nl))
         grid = pineappl.grid.Grid.read(grid_path_)
-        central_pdf = lhapdf.mkPDF(pdf, 0)
+        central_pdf = NEOPDF.mkPDF(pdf, 0)
         df["sqrt_s"] = grid.bin_left(0)
         # Fix µ to the central choice
         xi = m_central / m
@@ -339,7 +341,7 @@ def pdf_raw(
             )
             dfs[new_label] = df
             # Log xmin ~ sqrts_max
-            pdf_set = lhapdf.getPDFSet(pdf)
+            pdf_set = NEOPDF.getPDFSet(pdf)
             if not pdf_set.has_key("XMin"):
                 sqrts_maxs.append(None)
             else:
@@ -967,25 +969,25 @@ def _alphas_from_lhapdf(
     fake_down_name: str,
     extra: Extrapolation,
 ) -> pd.DataFrame:
-    central_pdf = lhapdf.mkPDF(pdf, 0)
+    central_pdf = NEOPDF.mkPDF(pdf, 0)
     central = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(central_pdf),
         central_pdf.alphasQ2,
     )
-    fake_central_pdf = lhapdf.mkPDF(fake_central_name, 0)
+    fake_central_pdf = NEOPDF.mkPDF(fake_central_name, 0)
     fake_central = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(fake_central_pdf),
         fake_central_pdf.alphasQ2,
     )
-    fake_up_pdf = lhapdf.mkPDF(fake_up_name, 0)
+    fake_up_pdf = NEOPDF.mkPDF(fake_up_name, 0)
     fake_up = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(fake_up_pdf),
         fake_up_pdf.alphasQ2,
     )
-    fake_down_pdf = lhapdf.mkPDF(fake_down_name, 0)
+    fake_down_pdf = NEOPDF.mkPDF(fake_down_name, 0)
     fake_down = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(fake_down_pdf),
@@ -1023,21 +1025,21 @@ def _alphas_msht(
             thresholds_ratios=np.array([1.0, 1.0, 1.0]),
         )
 
-    central_pdf = lhapdf.mkPDF(pdf, 0)
+    central_pdf = NEOPDF.mkPDF(pdf, 0)
     central = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(central_pdf),
         central_pdf.alphasQ2,
     )
     sc_down = mk_sc(0.117)
-    down_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 1)
+    down_pdf = NEOPDF.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 1)
     down = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(down_pdf),
         lambda q2: 4.0 * np.pi * sc_down.a_s(q2, nf_to=abs(nl)),
     )
     sc_up = mk_sc(0.119)
-    up_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 2)
+    up_pdf = NEOPDF.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 2)
     up = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(up_pdf),
@@ -1059,7 +1061,7 @@ def alphas(
     """Plot alpha_s dependency"""
     # load data
     grid_path_ = pathlib.Path(grid_path(m, nl))
-    lhapdf.setVerbosity(0)
+    # lhapdf_setVerbosity(0)
     grid = pineappl.grid.Grid.read(grid_path_)
     if "NNPDF" in pdf:
         df = _alphas_nnpdf(grid, pdf, extra)
