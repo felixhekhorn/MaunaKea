@@ -996,6 +996,12 @@ def _alphas_from_lhapdf(
     df["central"] = central
     df["up"] = fake_up / fake_central * central
     df["down"] = fake_down / fake_central * central
+    df["min"] = (
+        np.min([fake_up, fake_central, fake_down], axis=0) / fake_central * central
+    )
+    df["max"] = (
+        np.max([fake_up, fake_central, fake_down], axis=0) / fake_central * central
+    )
     df["fake_central"] = fake_central
     df["fake_up"] = fake_up
     df["fake_down"] = fake_down
@@ -1042,6 +1048,8 @@ def _alphas_msht(
     df["central"] = central
     df["up"] = up
     df["down"] = down
+    df["min"] = np.min([up, central, down], axis=0)
+    df["max"] = np.max([up, central, down], axis=0)
     return df
 
 
