@@ -619,23 +619,59 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
 
     # plot bare
     fig, axs = plt.subplots(
-        3, 1, height_ratios=[1, 0.35, 0.35], sharex=True, figsize=(5, 5)
+        3, 1, height_ratios=[1, 0.7, 0.35], sharex=True, figsize=(5, 7.5)
     )
     axP = axs[0]
+    y_min, y_max = 0.1, 1.0
+    linestyles = ["dotted", "dashed", "solid"]
     for k, lab in [(0, "LO"), (1, "NLO"), (2, "NNLO")]:
         df = dfs[k]
         axP.fill_between(df["sqrt_s"], df["sv_min"], df["sv_max"], alpha=0.4)
-        axP.plot(df["sqrt_s"], df["central"], label=lab)
-        axP.set_xlim(10.0, SHORT_RANGE_MAX if short_range else df["sqrt_s"].max())
+        axP.plot(
+            df["sqrt_s"],
+            df["sv_min"],
+            linewidth=1.0,
+            color=f"C{k}",
+            linestyle=linestyles[k],
+        )
+        axP.plot(
+            df["sqrt_s"],
+            df["sv_max"],
+            linewidth=1.0,
+            color=f"C{k}",
+            linestyle=linestyles[k],
+        )
+        axP.plot(
+            df["sqrt_s"],
+            df["central"],
+            label=lab,
+            color=f"C{k}",
+            linestyle=linestyles[k],
+        )
+        # adjust raqnges
+        x_max = SHORT_RANGE_MAX if short_range else df["sqrt_s"].max()
+        axP.set_xlim(10.0, x_max)
+        mask = df["sqrt_s"] <= x_max
+        y_min = np.min([df["sv_min"][mask].min(), y_min])
+        y_max = np.max([df["sv_max"][mask].max(), y_max])
     axP.set_xscale("log")
     axP.set_yscale("log")
+    axP.set_ylim(y_min, y_max)
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
     add_xmin(m, axP)
     axP.text(
         0.03,
         0.95,
-        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$" + f"\n{pdf}",
+        rf"$p + p \to {TEX_LABELS[abs(nl)]} + X$",
         horizontalalignment="left",
+        verticalalignment="top",
+        transform=axP.transAxes,
+    )
+    axP.text(
+        0.95,
+        0.37,
+        f"\n{pdf}",
+        horizontalalignment="right",
         verticalalignment="top",
         transform=axP.transAxes,
     )
@@ -644,19 +680,46 @@ def pto(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) ->
     axU = axs[1]
     for k, lab in [(0, "LO"), (1, "NLO"), (2, "NNLO")]:
         df = dfs[k]
+        axU.fill_between(
+            df["sqrt_s"],
+            df["sv_min"] / dfs[2]["central"],
+            df["sv_max"] / dfs[2]["central"],
+            alpha=0.4,
+        )
         axU.plot(
             df["sqrt_s"],
-            (df["sv_max"] - df["sv_min"]) / df["central"].abs(),
-            label=lab,
+            df["sv_min"] / dfs[2]["central"],
+            linewidth=1.0,
+            color=f"C{k}",
+            linestyle=linestyles[k],
         )
-    axU.set_ylim(0.0, 3.1)
-    axU.set_yticks([0.0, 1.0, 2.0, 3.0])
-    axU.set_ylabel("rel. Unc.")
+        axU.plot(
+            df["sqrt_s"],
+            df["sv_max"] / dfs[2]["central"],
+            linewidth=1.0,
+            color=f"C{k}",
+            linestyle=linestyles[k],
+        )
+        axU.plot(
+            df["sqrt_s"],
+            df["central"] / dfs[2]["central"],
+            color=f"C{k}",
+            linestyle=linestyles[k],
+        )
+    axU.set_yscale("log")
+    axU.set_ylim(0.09, 2.1)
+    # axU.set_yticks([0.1, 0.5, 1.0, 2.0])
+    axU.set_ylabel(r"$\sigma/\text{NNLO}$")
     # plot K-factor
     axK = axs[2]
     axK.plot([])  # add empty plot to align colors
     for k1, k2, lab in [(1, 0, "NLO/LO"), (2, 1, "NNLO/NLO")]:
-        axK.plot(dfs[k1]["sqrt_s"], dfs[k1]["central"] / dfs[k2]["central"], label=lab)
+        axK.plot(
+            dfs[k1]["sqrt_s"],
+            dfs[k1]["central"] / dfs[k2]["central"],
+            label=lab,
+            linestyle=linestyles[k1],
+        )
     axK.set_ylim(0.9, 3.1)
     axK.set_xlabel(r"$\sqrt{s}$ [GeV]")
     axK.set_ylabel(r"K factor")
