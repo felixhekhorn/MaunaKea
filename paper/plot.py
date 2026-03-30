@@ -374,6 +374,15 @@ def pdf_raw(
         verticalalignment="top",
         transform=axs[0].transAxes,
     )
+    if len(sqrts_maxs) > 0:
+        axs[0].text(
+            0.03,
+            0.87,
+            rf"dashed: $4m_{TEX_LABELS[abs(nl)][0]}^2/s = x_\text{{gridmin}}$",
+            horizontalalignment="left",
+            verticalalignment="top",
+            transform=axs[0].transAxes,
+        )
     axs[0].legend(loc="upper left", bbox_to_anchor=(-0.03, 0.0), frameon=False)
     # plot nominal x_min
     if m != 0.0:
