@@ -1154,7 +1154,7 @@ def alphas(
     axP.set_yscale("log")
     axP.set_ylabel(f"$\\sigma_{{{TEX_LABELS[abs(nl)]}}}$ [µb]")
     add_xmin(m, axP)
-    axP.legend(loc="lower right")
+    axP.legend(loc="lower right", frameon=False)
     # plot rel. uncertainty
     axU = axs[1]
     axU.fill_between(
