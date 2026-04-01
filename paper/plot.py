@@ -50,9 +50,7 @@ class Extrapolation:
 
 
 # Set the default color cycle
-mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
-    color=["#001D66", "#B01C64", "#FFBF33", "#3D2E85", "#FF6000", "#FFF180"]
-)
+mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=["#6677a3", "#d077a2", "#70ad85"])
 
 
 def m_to_str(m: float) -> str:
