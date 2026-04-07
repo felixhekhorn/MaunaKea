@@ -344,11 +344,11 @@ def pdf_raw(
                 xmin = float(pdf_set.get_entry("XMin"))
                 sqrts_maxs.append(np.sqrt(4.0 * actual_m_**2 / xmin))
 
-    output = f"{LABELS[nl]}-{mass_label}{suffix}.pdf"
+    output = f"{LABELS[nl]}-{mass_label}{suffix}-NN.pdf"
 
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True, figsize=(5, 5))
     for ax in axs:
-        ax.set_prop_cycle(color=["#ff7f0e", "#9467bd", "#1f77b4"])
+        ax.set_prop_cycle(color=["#ff7f0e", "#2ca02c"])
     # plot data
     for pdf_set, df in dfs.items():
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
@@ -446,9 +446,9 @@ def to_elems(m: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
                         # "NNPDF40_nnlo_as_01180",
                         # "NNPDF31_nnlo_as_0118",
                         # "NNPDF30_nnlo_as_0118",
-                        # "NNPDF31_nnlo_pch_as_0118",
-                        "MSHT20nnlo_nf3",
-                        "CT18NNLO_rescaled_NF3",
+                        "NNPDF31_nnlo_pch_as_0118",
+                        # "MSHT20nnlo_nf3",
+                        # "CT18NNLO_rescaled_NF3",
                         # "MSHT20nnlo_mcrange_nf3"
                     ],
                 )
