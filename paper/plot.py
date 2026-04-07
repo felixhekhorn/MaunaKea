@@ -50,9 +50,7 @@ class Extrapolation:
 
 
 # Set the default color cycle
-mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
-    color=mpl.colors.to_rgba_array(["C1", "C4", "C0"])
-)
+mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=["#004488", "#BB5566", "#DDAA33"])
 
 
 def m_to_str(m: float) -> str:
@@ -349,6 +347,8 @@ def pdf_raw(
     output = f"{LABELS[nl]}-{mass_label}{suffix}.pdf"
 
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True, figsize=(5, 5))
+    for ax in axs:
+        ax.set_prop_cycle(color=["#ff7f0e", "#9467bd", "#1f77b4"])
     # plot data
     for pdf_set, df in dfs.items():
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
