@@ -348,10 +348,12 @@ def pdf_raw(
 
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.5], sharex=True, figsize=(5, 5))
     for ax in axs:
-        ax.set_prop_cycle(color=["#ff7f0e", "#9467bd", "#1f77b4"])
+        ax.set_prop_cycle(color=["#ff7f0e", "#1f77b4", "#9467bd"])
     # plot data
     for pdf_set, df in dfs.items():
         axs[0].fill_between(df["sqrt_s"], df["pdf_minus"], df["pdf_plus"], alpha=0.4)
+        # hack CT18
+        pdf_set = pdf_set.replace("_rescaled", "")
         axs[0].plot(df["sqrt_s"], df["central"], label=pdf_set)
         axs[0].set_xlim(10.0, df["sqrt_s"].max())
     axs[0].set_xscale("log")
@@ -470,13 +472,13 @@ def to_elems(m: float, nl: int) -> Collection[Tuple[float, Collection[str]]]:
         if nl == 3:
             elems = [
                 (1.51, ["NNPDF40_nnlo_pch_as_01180_nf_3"]),
-                (1.4, ["MSHT20nnlo_nf3"]),
                 (1.3, ["CT18NNLO_rescaled_NF3"]),
+                (1.4, ["MSHT20nnlo_nf3"]),
             ]
         elif nl == 4:
             elems = [
                 (4.92, ["NNPDF40_nnlo_as_01180_nf_4"]),
-                (4.75, ["MSHT20nnlo_nf4", "CT18NNLO_rescaled_NF4"]),
+                (4.75, ["CT18NNLO_rescaled_NF4", "MSHT20nnlo_nf4"]),
             ]
     return elems
 
