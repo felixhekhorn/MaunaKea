@@ -93,7 +93,7 @@ def extract_sv_by_order(
     df["sv_min"] = np.min(sv_vals, axis=1)
     df["sv_max"] = np.max(sv_vals, axis=1)
     for xi, sv_val in zip(xis, sv_vals.T):
-        df[f"xif={xi[0]},xir={xi[1]}"] = sv_val
+        df[f"xir={xi[0]},xif={xi[1]}"] = sv_val
     return df
 
 
