@@ -10,6 +10,7 @@ import lhapdf
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import pineappl
 from eko.couplings import Couplings
@@ -58,41 +59,61 @@ def m_to_str(m: float) -> str:
     return f"{m:.2f}".replace(".", "p")
 
 
+def avgpt(nl: int, sqrts: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """Compute <pt> according to Hannu's prescription.
+
+    See mail from 17.04.26, 12:44."""
+    if abs(nl) == 3:
+        return -0.087 + 0.23 * np.log(sqrts)
+    if abs(nl) == 4:
+        return -7.75 + 6.93 * (np.log(sqrts)) ** 0.21
+    return np.zeros_like(sqrts)
+
+
 def extract_sv_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
+    m: float,
+    nl: int,
+    grid: pineappl.grid.Grid,
+    central_pdf: lhapdf.PDF,
+    extra: Extrapolation,
+    pto_: int,
 ) -> pd.DataFrame:
     """Extract a given PTO together with its SV."""
     # compute central value
     order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
+    sqrt_s = grid.bin_left(0)
+    xi0s = np.sqrt(4.0 * m * m + avgpt(nl, sqrt_s) ** 2.0) / (2.0 * m)
     central = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(central_pdf),
         central_pdf.alphasQ2,
         order_mask=order_mask,
+        xi=list(map(lambda xi: (xi, xi), xi0s)),
     )
+    central = np.diag(central.reshape(len(sqrt_s), len(sqrt_s)))
     # compute SV
     xis = []
-    for xif in (0.5, 1.0, 2.0):
-        for xir in (0.5, 1.0, 2.0):
-            if xif / xir >= 4.0 or xir / xif >= 4.0:
-                continue
-            xis.append((xir, xif))
+    for xi0 in xi0s:
+        for xif in (0.5, 1.0, 2.0):
+            for xir in (0.5, 1.0, 2.0):
+                if xif / xir >= 4.0 or xir / xif >= 4.0:
+                    continue
+                xis.append((xi0 * xir, xi0 * xif))
     # xis = [(0.5, 0.5), (2.0, 2.0)]
-    sv_vals = (
-        grid.convolute_with_one(
-            2212,
-            extra.masked_xfxQ2(central_pdf),
-            central_pdf.alphasQ2,
-            xi=xis,
-            order_mask=order_mask,
-        )
-    ).reshape(len(central), 7)
+    sv_vals = grid.convolute_with_one(
+        2212,
+        extra.masked_xfxQ2(central_pdf),
+        central_pdf.alphasQ2,
+        xi=xis,
+        order_mask=order_mask,
+    )
+    sv_vals = np.diagonal(sv_vals.reshape(len(central), len(central), 7))
     df = pd.DataFrame()
-    df["sqrt_s"] = grid.bin_left(0)
+    df["sqrt_s"] = sqrt_s
     df["central"] = central
-    df["sv_min"] = np.min(sv_vals, axis=1)
-    df["sv_max"] = np.max(sv_vals, axis=1)
-    for xi, sv_val in zip(xis, sv_vals.T):
+    df["sv_min"] = np.min(sv_vals, axis=0)
+    df["sv_max"] = np.max(sv_vals, axis=0)
+    for xi, sv_val in zip(xis, sv_vals):
         df[f"xir={xi[0]},xif={xi[1]}"] = sv_val
     return df
 
@@ -109,7 +130,7 @@ def load_pto(
     # prepare data
     dfs = {}
     for k in range(2 + 1):
-        df = extract_sv_by_order(grid, central_pdf, extra, k)
+        df = extract_sv_by_order(m, nl, grid, central_pdf, extra, k)
         df.to_csv(f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf}-pto-{k}{extra.suffix}.csv")
         dfs[k] = df
     return dfs
