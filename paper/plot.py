@@ -70,6 +70,13 @@ def avgpt(nl: int, sqrts: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     return np.zeros_like(sqrts)
 
 
+def xi0s(m: float, nl: int, sqrts: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """Compute central scale according to Hannu's prescription.
+
+    See mail from 17.04.26, 12:44."""
+    return np.sqrt(4.0 * m * m + avgpt(nl, sqrts) ** 2.0) / (2.0 * m)
+
+
 def extract_sv_by_order(
     m: float,
     nl: int,
@@ -82,18 +89,18 @@ def extract_sv_by_order(
     # compute central value
     order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
     sqrt_s = grid.bin_left(0)
-    xi0s = np.sqrt(4.0 * m * m + avgpt(nl, sqrt_s) ** 2.0) / (2.0 * m)
+    xi0s_ = xi0s(m, nl, sqrt_s)
     central = grid.convolute_with_one(
         2212,
         extra.masked_xfxQ2(central_pdf),
         central_pdf.alphasQ2,
         order_mask=order_mask,
-        xi=list(map(lambda xi: (xi, xi), xi0s)),
+        xi=list(map(lambda xi: (xi, xi), xi0s_)),
     )
     central = np.diag(central.reshape(len(sqrt_s), len(sqrt_s)))
     # compute SV
     xis = []
-    for xi0 in xi0s:
+    for xi0 in xi0s_:
         for xif in (0.5, 1.0, 2.0):
             for xir in (0.5, 1.0, 2.0):
                 if xif / xir >= 4.0 or xir / xif >= 4.0:
@@ -223,7 +230,12 @@ def load_extra(
 
 
 def extract_lumis_by_order(
-    grid: pineappl.grid.Grid, central_pdf: lhapdf.PDF, extra: Extrapolation, pto_: int
+    m: float,
+    nl: int,
+    grid: pineappl.grid.Grid,
+    central_pdf: lhapdf.PDF,
+    extra: Extrapolation,
+    pto_: int,
 ) -> pd.DataFrame:
     """Extract lumi fraction for a given PTO."""
     order_mask = pineappl.grid.Order.create_mask(grid.orders(), 2 - 1 + pto_, 0, True)
@@ -234,17 +246,21 @@ def extract_lumis_by_order(
         order_mask=order_mask,
     )
     df = pd.DataFrame()
-    df["sqrt_s"] = grid.bin_left(0)
+    sqrt_s = grid.bin_left(0)
+    df["sqrt_s"] = sqrt_s
     df["total"] = full
     for lu, lab in enumerate(("gg", "qqbar", "gq")):
         lumi_mask = [False] * 6
         lumi_mask[lu] = True
-        df[lab] = grid.convolute_with_one(
-            2212,
-            extra.masked_xfxQ2(central_pdf),
-            central_pdf.alphasQ2,
-            lumi_mask=lumi_mask,
-            order_mask=order_mask,
+        df[lab] = np.diag(
+            grid.convolute_with_one(
+                2212,
+                extra.masked_xfxQ2(central_pdf),
+                central_pdf.alphasQ2,
+                lumi_mask=lumi_mask,
+                order_mask=order_mask,
+                xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+            ).reshape(len(sqrt_s), len(sqrt_s))
         )
     return df
 
@@ -261,7 +277,7 @@ def load_lumi(
     # prepare data
     dfs = {}
     for k in range(2 + 1):
-        df = extract_lumis_by_order(grid, central_pdf, extra, k)
+        df = extract_lumis_by_order(m, nl, grid, central_pdf, extra, k)
         df.to_csv(
             f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf.replace('/','__')}-lumi-{k}{extra.suffix}.csv"
         )
@@ -284,7 +300,7 @@ def load_pdf(
         # compute PDF uncert
         pdf_vals = []
         for pdf_ in pdfs:
-            pdf_vals.append(f(grid, pdf_))
+            pdf_vals.append(f(m, nl, grid, pdf_))
         pdf_vals = np.array(pdf_vals)
         df = pd.DataFrame()
         df["sqrt_s"] = grid.bin_left(0)
@@ -297,7 +313,7 @@ def load_pdf(
             pdf_errs = []
             # make exception for MSHT20nnlo_mXrange_nfY
             if pdf_set.errorType == "unknown":
-                df["central"] = pdf_vals.mean(axis=0)
+                df["central"] = pdf_vals[0]
                 df["pdf_minus"] = pdf_vals.min(axis=0)
                 df["pdf_plus"] = pdf_vals.max(axis=0)
             else:
@@ -324,11 +340,17 @@ def load_mass(ms: list[float], nl: int, pdf: str, extra: Extrapolation) -> pd.Da
         grid_path_ = pathlib.Path(grid_path(m, nl))
         grid = pineappl.grid.Grid.read(grid_path_)
         central_pdf = lhapdf.mkPDF(pdf, 0)
-        df["sqrt_s"] = grid.bin_left(0)
+        sqrt_s = grid.bin_left(0)
+        df["sqrt_s"] = sqrt_s
         # Fix µ to the central choice
-        xi = m_central / m
-        vals = grid.convolute_with_one(
-            2212, extra.masked_xfxQ2(central_pdf), central_pdf.alphasQ2, xi=[(xi, xi)]
+        xi0s_ = xi0s(m_central, nl, sqrt_s) * m_central / m
+        vals = np.diag(
+            grid.convolute_with_one(
+                2212,
+                extra.masked_xfxQ2(central_pdf),
+                central_pdf.alphasQ2,
+                xi=list(map(lambda xi: (xi, xi), xi0s_)),
+            ).reshape(len(sqrt_s), len(sqrt_s))
         )
         df[f"{j}"] = vals
         pdf_vals.append(vals)
@@ -510,8 +532,16 @@ def pdf_obs(m: float, nl: int, extra: Extrapolation) -> None:
     """Plot PDF dependence."""
 
     # plot the actual predictions
-    def conv(grid, pdf_):
-        return grid.convolute_with_one(2212, extra.masked_xfxQ2(pdf_), pdf_.alphasQ2)
+    def conv(m, nl, grid, pdf_):
+        sqrt_s = grid.bin_left(0)
+        return np.diag(
+            grid.convolute_with_one(
+                2212,
+                extra.masked_xfxQ2(pdf_),
+                pdf_.alphasQ2,
+                xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+            ).reshape(len(sqrt_s), len(sqrt_s))
+        )
 
     fig, path = pdf_raw(
         m,
@@ -560,7 +590,7 @@ def add_xmin(m: float, ax0) -> None:
 def pdf_gluon(m: float, nl: int, extra: Extrapolation) -> None:
     """Plot gluon(x_min) dependence."""
 
-    def extract(grid, pdf_):
+    def extract(m, nl, grid, pdf_):
         res = []
         for b in range(len(grid.bin_left(0))):
             sg = grid.subgrid(0, b, 0)
@@ -581,7 +611,7 @@ def pdf_gluon(m: float, nl: int, extra: Extrapolation) -> None:
 def pdf_xmean(m: float, nl: int, extra: Extrapolation) -> None:
     """Plot x_mean PDF dependence."""
 
-    def conv(grid, pdf_):
+    def conv(m, nl, grid, pdf_):
         x1 = grid.convolute_with_two(
             2212,
             lambda pid, x, q2: x * extra.masked_xfxQ2(pdf_)(pid, x, q2),
@@ -623,7 +653,7 @@ def pdf_gg(m: float, nl: int, extra: Extrapolation) -> None:
         i, _e = quad(lumi_ker, x, 1.0, args=(pdf_, x, mu2), limit=100)
         return i
 
-    def extract(grid, pdf_):
+    def extract(m, nl, grid, pdf_):
         res = []
         for b in range(len(grid.bin_left(0))):
             sg = grid.subgrid(0, b, 0)
@@ -978,7 +1008,8 @@ def mass(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
     else:
         raise ValueError("Could not determine mass range")
     df = load_mass(ms, nl, pdf, extra)
-    label = f"$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}$ GeV"
+    # label = f"$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}$ GeV"
+    label = f"$m_{TEX_LABELS[abs(nl)][0]}={min(ms):.2f} - {max(ms):.2f}$ GeV\n$\\mu=2\\cdot{ms[0]:.2f}\\,\\text{{GeV}}+\\langle p_t \\rangle$"
 
     # plot bare
     fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True, figsize=(5, 5))
@@ -1034,10 +1065,12 @@ def mass(m: float, nl: int, pdf: str, extra: Extrapolation, short_range: bool) -
 
 
 def _alphas_nnpdf(
-    grid: pineappl.grid.Grid, pdf: str, extra: Extrapolation
+    m: float, nl: int, grid: pineappl.grid.Grid, pdf: str, extra: Extrapolation
 ) -> pd.DataFrame:
     """Collect NNPDF alpha_s dependency"""
     return _alphas_from_lhapdf(
+        m,
+        nl,
         grid,
         pdf,
         "NNPDF40_nnlo_as_01180",
@@ -1048,15 +1081,17 @@ def _alphas_nnpdf(
 
 
 def _alphas_ct(
-    grid: pineappl.grid.Grid, pdf: str, extra: Extrapolation
+    m: float, nl: int, grid: pineappl.grid.Grid, pdf: str, extra: Extrapolation
 ) -> pd.DataFrame:
     """Collect CT18 alpha_s dependency"""
     return _alphas_from_lhapdf(
-        grid, pdf, "CT18NNLO", "CT18NNLO_as_0119", "CT18NNLO_as_0117", extra
+        m, nl, grid, pdf, "CT18NNLO", "CT18NNLO_as_0119", "CT18NNLO_as_0117", extra
     )
 
 
 def _alphas_from_lhapdf(
+    m: float,
+    nl: int,
     grid: pineappl.grid.Grid,
     pdf: str,
     fake_central_name: str,
@@ -1065,31 +1100,44 @@ def _alphas_from_lhapdf(
     extra: Extrapolation,
 ) -> pd.DataFrame:
     central_pdf = lhapdf.mkPDF(pdf, 0)
-    central = grid.convolute_with_one(
-        2212,
-        extra.masked_xfxQ2(central_pdf),
-        central_pdf.alphasQ2,
+    sqrt_s = grid.bin_left(0)
+    central = np.diag(
+        grid.convolute_with_one(
+            2212,
+            extra.masked_xfxQ2(central_pdf),
+            central_pdf.alphasQ2,
+            xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+        ).reshape(len(sqrt_s), len(sqrt_s))
     )
     fake_central_pdf = lhapdf.mkPDF(fake_central_name, 0)
-    fake_central = grid.convolute_with_one(
-        2212,
-        extra.masked_xfxQ2(fake_central_pdf),
-        fake_central_pdf.alphasQ2,
+    fake_central = np.diag(
+        grid.convolute_with_one(
+            2212,
+            extra.masked_xfxQ2(fake_central_pdf),
+            fake_central_pdf.alphasQ2,
+            xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+        ).reshape(len(sqrt_s), len(sqrt_s))
     )
     fake_up_pdf = lhapdf.mkPDF(fake_up_name, 0)
-    fake_up = grid.convolute_with_one(
-        2212,
-        extra.masked_xfxQ2(fake_up_pdf),
-        fake_up_pdf.alphasQ2,
+    fake_up = np.diag(
+        grid.convolute_with_one(
+            2212,
+            extra.masked_xfxQ2(fake_up_pdf),
+            fake_up_pdf.alphasQ2,
+            xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+        ).reshape(len(sqrt_s), len(sqrt_s))
     )
     fake_down_pdf = lhapdf.mkPDF(fake_down_name, 0)
-    fake_down = grid.convolute_with_one(
-        2212,
-        extra.masked_xfxQ2(fake_down_pdf),
-        fake_down_pdf.alphasQ2,
+    fake_down = np.diag(
+        grid.convolute_with_one(
+            2212,
+            extra.masked_xfxQ2(fake_down_pdf),
+            fake_down_pdf.alphasQ2,
+            xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+        ).reshape(len(sqrt_s), len(sqrt_s))
     )
     df = pd.DataFrame()
-    df["sqrt_s"] = grid.bin_left(0)
+    df["sqrt_s"] = sqrt_s
     df["central"] = central
     df["up"] = fake_up / fake_central * central
     df["down"] = fake_down / fake_central * central
@@ -1121,27 +1169,37 @@ def _alphas_msht(
         )
 
     central_pdf = lhapdf.mkPDF(pdf, 0)
-    central = grid.convolute_with_one(
-        2212,
-        extra.masked_xfxQ2(central_pdf),
-        central_pdf.alphasQ2,
+    sqrt_s = grid.bin_left(0)
+    central = np.diag(
+        grid.convolute_with_one(
+            2212,
+            extra.masked_xfxQ2(central_pdf),
+            central_pdf.alphasQ2,
+            xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+        ).reshape(len(sqrt_s), len(sqrt_s))
     )
     sc_down = mk_sc(0.117)
     down_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 1)
-    down = grid.convolute_with_one(
-        2212,
-        extra.masked_xfxQ2(down_pdf),
-        lambda q2: 4.0 * np.pi * sc_down.a_s(q2, nf_to=abs(nl)),
+    down = np.diag(
+        grid.convolute_with_one(
+            2212,
+            extra.masked_xfxQ2(down_pdf),
+            lambda q2: 4.0 * np.pi * sc_down.a_s(q2, nf_to=abs(nl)),
+            xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+        ).reshape(len(sqrt_s), len(sqrt_s))
     )
     sc_up = mk_sc(0.119)
     up_pdf = lhapdf.mkPDF(f"MSHT20nnlo_as_smallrange_nf{abs(nl)}", 2)
-    up = grid.convolute_with_one(
-        2212,
-        extra.masked_xfxQ2(up_pdf),
-        lambda q2: 4.0 * np.pi * sc_up.a_s(q2, nf_to=abs(nl)),
+    up = np.diag(
+        grid.convolute_with_one(
+            2212,
+            extra.masked_xfxQ2(up_pdf),
+            lambda q2: 4.0 * np.pi * sc_up.a_s(q2, nf_to=abs(nl)),
+            xi=list(map(lambda xi: (xi, xi), xi0s(m, nl, sqrt_s))),
+        ).reshape(len(sqrt_s), len(sqrt_s))
     )
     df = pd.DataFrame()
-    df["sqrt_s"] = grid.bin_left(0)
+    df["sqrt_s"] = sqrt_s
     df["central"] = central
     df["up"] = up
     df["down"] = down
@@ -1159,9 +1217,9 @@ def alphas(
     lhapdf.setVerbosity(0)
     grid = pineappl.grid.Grid.read(grid_path_)
     if "NNPDF" in pdf:
-        df = _alphas_nnpdf(grid, pdf, extra)
+        df = _alphas_nnpdf(m, nl, grid, pdf, extra)
     elif "CT" in pdf:
-        df = _alphas_ct(grid, pdf, extra)
+        df = _alphas_ct(m, nl, grid, pdf, extra)
     elif "MSHT" in pdf:
         df = _alphas_msht(m, nl, grid, pdf, extra)
     else:
