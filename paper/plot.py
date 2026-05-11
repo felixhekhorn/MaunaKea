@@ -1149,7 +1149,7 @@ def alphas(
     df.to_csv(f"data/{LABELS[nl]}-{m_to_str(m)}-{pdf.replace('/','__')}-alphas.csv")
 
     # plot bare
-    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True)
+    fig, axs = plt.subplots(2, 1, height_ratios=[1, 0.35], sharex=True, figsize=(5, 5))
     axP = axs[0]
     axP.fill_between(df["sqrt_s"], df["down"], df["up"], alpha=0.4)
     axP.plot(df["sqrt_s"], df["central"], label=r"$\alpha_s = 0.118 \pm 0.001$")
